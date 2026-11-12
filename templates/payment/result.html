@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Kết quả thanh toán{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-6">
+  <div class="card text-center p-4">
+    {% if t.status == 'success' %}
+      <div class="result-icon bg-soft-success"><i class="bi bi-check-lg"></i></div>
+      <h4 class="fw-bold">Thanh toán thành công</h4>
+      <p class="text-muted">Học phí đã được gạch nợ tự động. Biên lai điện tử đã được phát hành.</p>
+    {% elif t.status == 'review' %}
+      <div class="result-icon bg-soft-warning"><i class="bi bi-hourglass-split"></i></div>
+      <h4 class="fw-bold">Đang chờ kế toán kiểm tra</h4>
+      <p class="text-muted">{{ t.note }}</p>
+    {% elif t.status == 'pending' %}
+      <div class="result-icon bg-soft-primary"><i class="bi bi-clock"></i></div>
+      <h4 class="fw-bold">Giao dịch đang chờ xử lý</h4>
+    {% else %}
+      <div class="result-icon bg-soft-danger"><i class="bi bi-x-lg"></i></div>
+      <h4 class="fw-bold">Thanh toán không thành công</h4>
+      <p class="text-muted">{{ t.note or 'Giao dịch đã bị huỷ.' }}</p>
+    {% endif %}
+    <div class="text-start bg-light rounded-3 p-3 my-3">
+      <div class="d-flex justify-content-between mb-1"><span class="text-muted">Mã giao dịch</span><b>{{ t.txn_ref }}</b></div>
+      <div class="d-flex justify-content-between mb-1"><span class="text-muted">Phương thức</span><b>{{ METHOD_LABEL.get(t.method, t.method) }}</b></div>
+      {% if t.gateway_txn_no %}<div class="d-flex justify-content-between mb-1"><span class="text-muted">Mã ngân hàng / cổng</span><b>{{ t.gateway_txn_no }} {{ t.bank_code or '' }}</b></div>{% endif %}
+      <div class="d-flex justify-content-between mb-1"><span class="text-muted">Thời gian</span><b>{{ t.paid_at or t.created_at }}</b></div>
+      <div class="d-flex justify-content-between"><span class="text-muted">Số tiền</span><b class="text-primary money">{{ t.amount|vnd }}</b></div>
+    </div>
+    <div class="d-flex gap-2 justify-content-center">
+      {% if receipt %}<a class="btn btn-primary" target="_blank" href="{{ url_for('receipt_pdf', receipt_no=receipt.receipt_no) }}"><i class="bi bi-file-earmark-pdf me-1"></i>Tải biên lai</a>{% endif %}
+      {% if t.status == 'failed' %}<a class="btn btn-primary" href="{{ url_for('student.invoice', invoice_id=t.invoice_id) if g.user.role=='student' else url_for('accountant.invoice_detail', invoice_id=t.invoice_id) }}">Thử lại</a>{% endif %}
+      <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">Về trang chủ</a>
+    </div>
+  </div>
+</div></div>
+{% endblock %}

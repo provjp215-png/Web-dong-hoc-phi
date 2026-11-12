@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Nhập sinh viên từ Excel{% endblock %}
+{% block content %}
+<div class="page-title">Nhập danh sách sinh viên từ Excel</div>
+<div class="page-sub">Tạo tài khoản hàng loạt cho sinh viên khoá mới. Tài khoản được kích hoạt ngay với mật khẩu tạm <code>{{ default_pw }}</code> và phải đổi ở lần đăng nhập đầu.</div>
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card"><div class="card-body">
+      <div class="fw-semibold mb-2">Bước 1 – Tải file mẫu</div>
+      <p class="small text-muted">Cột bắt buộc: {{ cols[:3]|join(', ') }}. Cột "Ngành" có danh sách chọn sẵn đúng theo danh mục của trường.</p>
+      <a href="{{ url_for('admin.import_template') }}" class="btn btn-outline-success mb-4"><i class="bi bi-file-earmark-excel me-1"></i>Tải file mẫu (.xlsx)</a>
+      <div class="fw-semibold mb-2">Bước 2 – Tải file đã điền lên</div>
+      <form method="post" enctype="multipart/form-data" class="vstack gap-2">
+        <input type="file" name="file" accept=".xlsx" class="form-control" required>
+        <button class="btn btn-primary">Nhập danh sách</button>
+      </form>
+      <div class="small text-muted mt-3">Dòng trùng mã sinh viên, thiếu họ tên hoặc sai ngành sẽ bị bỏ qua và báo lý do; các dòng hợp lệ vẫn được nhập. Sau khi nhập, kế toán vào <i>Khoản thu & học kỳ → Lập hoá đơn</i> để tạo học phí cho sinh viên mới.</div>
+    </div></div>
+  </div>
+  <div class="col-lg-7">
+    {% if result %}
+    <div class="card mb-3"><div class="card-header d-flex"><span>Đã thêm {{ result.added|length }} sinh viên</span></div>
+      <table class="table table-sm"><tbody>{% for r in result.added %}
+        <tr><td class="small text-muted">Dòng {{ r.row }}</td><td class="fw-semibold">{{ r.code }}</td><td>{{ r.name }}</td><td class="small">{{ r.faculty }}</td></tr>
+      {% else %}<tr><td class="text-muted">Không có dòng nào hợp lệ</td></tr>{% endfor %}</tbody></table></div>
+    {% if result.skipped %}
+    <div class="card border-warning"><div class="card-header text-warning">Bỏ qua {{ result.skipped|length }} dòng</div>
+      <table class="table table-sm"><tbody>{% for r in result.skipped %}
+        <tr><td class="small text-muted">Dòng {{ r.row }}</td><td>{{ r.code }}</td><td>{{ r.name }}</td><td class="small text-danger">{{ r.reason }}</td></tr>
+      {% endfor %}</tbody></table></div>
+    {% endif %}
+    {% else %}
+    <div class="card"><div class="card-body text-muted text-center py-5">Kết quả nhập sẽ hiển thị ở đây</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

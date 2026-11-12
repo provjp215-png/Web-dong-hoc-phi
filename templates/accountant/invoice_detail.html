@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, method_icon with context %}
+{% block title %}Hoá đơn {{ inv.code }}{% endblock %}
+{% block content %}
+<nav class="small mb-2"><a href="{{ url_for('accountant.invoices', hk=inv.semester_id) }}">Công nợ học phí</a> / {{ inv.code }}</nav>
+<div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+  <div><div class="page-title mb-0">{{ inv.full_name }} <small class="text-muted fs-6">{{ inv.student_code }}</small></div>
+    <div class="text-muted">{{ inv.faculty }} · {{ inv.class_name }} · {{ inv.semester_name }} · {{ inv.credits }} tín chỉ</div></div>
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('accountant.charge_request', sv=inv.student_code, hk=inv.semester_id) }}"><i class="bi bi-plus-lg"></i> Thêm khoản phát sinh</a>
+    {{ status_badge(inv.display_status) }}</div>
+</div>
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card mb-4"><div class="card-header">Các khoản thu</div>
+      <table class="table">
+        <tbody>
+          {% for l in inv.lines %}<tr><td>{{ l.description }}</td><td class="text-end money">{{ l.amount|vnd }}</td></tr>{% endfor %}
+          {% for d in inv.discounts %}<tr class="text-success"><td><i class="bi bi-award me-1"></i>{{ d.description }}</td><td class="text-end money">− {{ d.computed|vnd }}</td></tr>{% endfor %}
+        </tbody>
+        <tfoot><tr><th>Phải nộp</th><th class="text-end money text-primary">{{ inv.total|vnd }}</th></tr>
+          <tr><td>Đã nộp</td><td class="text-end money text-success">{{ inv.paid|vnd }}</td></tr>
+          <tr><td>Phí trễ hạn đã thu</td><td class="text-end money">{{ inv.late_fee_paid|vnd }}</td></tr></tfoot>
+      </table>
+    </div>
+    <div class="card mb-4"><div class="card-header">Kế hoạch nộp</div>
+      <table class="table">
+        <thead><tr><th>Đợt</th><th>Hạn nộp</th><th class="text-end">Số tiền</th><th class="text-end">Còn nợ</th><th class="text-end">Phí trễ</th><th>Trạng thái</th></tr></thead>
+        <tbody>{% for i in inv.installments %}
+          <tr><td>{{ i.seq }}</td><td>{{ i.due_date }}</td><td class="text-end money">{{ i.amount|vnd }}</td><td class="text-end money">{{ i.outstanding|vnd }}</td>
+            <td class="text-end money">{{ (i.late_fee or i.late_fee_paid)|vnd }}</td>
+            <td>{{ status_badge('overdue' if i.overdue else i.status) }}</td></tr>
+        {% endfor %}</tbody>
+      </table>
+    </div>
+    <div class="card"><div class="card-header">Lịch sử giao dịch</div>
+      <table class="table">
+        <tbody>{% for t in txns %}
+          <tr><td>{{ method_icon(t.method) }}</td><td><code>{{ t.txn_ref }}</code><br><small class="text-muted">{{ t.paid_at or t.created_at }}</small></td>
+            <td class="text-end money">{{ t.amount|vnd }}</td><td>{{ status_badge(t.status) }}</td>
+            <td>{% if t.receipt_no %}<a target="_blank" href="{{ url_for('receipt_pdf', receipt_no=t.receipt_no) }}"><i class="bi bi-file-earmark-pdf"></i></a>{% endif %}</td></tr>
+        {% else %}<tr><td class="text-muted">Chưa có giao dịch</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-award me-2"></i>Áp dụng học bổng / miễn giảm</div>
+      <div class="card-body">
+        {% for a in pending %}
+          <div class="alert alert-warning small py-2"><i class="bi bi-hourglass-split me-1"></i>Đang chờ admin phê duyệt: {{ a.summary.split(' – ', 1)[-1] }}</div>
+        {% endfor %}
+        {% if inv.paid == 0 %}
+        {% if cfg.MAKER_CHECKER %}<div class="small text-muted mb-2"><i class="bi bi-shield-check me-1"></i>Miễn giảm trên {{ cfg.APPROVAL_DISCOUNT_PERCENT }}% học phí cần quản trị viên phê duyệt (phê duyệt hai cấp).</div>{% endif %}
+        <form method="post" class="row g-2">
+          <input type="hidden" name="action" value="discount">
+          <div class="col-12"><select name="kind" class="form-select"><option value="scholarship">Học bổng</option><option value="exemption">Miễn giảm học phí (chính sách)</option></select></div>
+          <div class="col-12"><input name="description" class="form-control" required placeholder="VD: Học bổng KKHT loại Giỏi"></div>
+          <div class="col-6"><div class="input-group"><input name="percent" type="number" step="1" min="0" max="100" class="form-control" placeholder="% học phí"><span class="input-group-text">%</span></div></div>
+          <div class="col-6"><div class="input-group"><input name="amount" type="number" step="1000" min="0" class="form-control" placeholder="hoặc số tiền"><span class="input-group-text">₫</span></div></div>
+          <div class="col-12 d-grid"><button class="btn btn-success">Áp dụng</button></div>
+        </form>
+        {% else %}<div class="text-muted small">Hoá đơn đã có thanh toán nên không thể điều chỉnh miễn giảm.</div>{% endif %}
+      </div>
+    </div>
+    {% if inv.paid == 0 and inv.total > 0 %}
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-calendar2-week me-2"></i>Điều chỉnh số đợt nộp</div>
+      <div class="card-body"><form method="post" class="d-flex gap-2"><input type="hidden" name="action" value="plan">
+        <select name="n" class="form-select">{% for n in range(1, max_n + 1) %}<option value="{{ n }}" {{ 'selected' if inv.installments|length == n }}>{{ n }} đợt</option>{% endfor %}</select>
+        <button class="btn btn-primary text-nowrap">Cập nhật</button></form></div>
+    </div>
+    {% endif %}
+    {% set open = inv.installments|selectattr('outstanding')|list %}
+    {% if open and cfg.ENABLE_CASH %}
+    <div class="card"><div class="card-header"><i class="bi bi-cash-coin me-2"></i>Thu tiền mặt tại quầy</div>
+      <div class="card-body"><form method="post" class="d-flex gap-2" onsubmit="return confirm('Xác nhận đã nhận đủ tiền mặt?')">
+        <input type="hidden" name="action" value="cash">
+        <select name="count" class="form-select">{% for i in open %}<option value="{{ loop.index }}">Đến hết đợt {{ i.seq }}</option>{% endfor %}</select>
+        <button class="btn btn-outline-success text-nowrap">Thu & in biên lai</button></form>
+        <small class="text-muted">Phí trễ hạn (nếu có) được tự động cộng vào.</small></div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

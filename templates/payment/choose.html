@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Chọn phương thức thanh toán{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-xl-9">
+  <div class="page-title">Chọn phương thức thanh toán</div>
+  <div class="page-sub">Giao dịch <code>{{ t.txn_ref }}</code> · {{ inv.semester_name }}</div>
+  <div class="row g-4">
+    <div class="col-md-7">
+      {% if cfg.ENABLE_VIETQR %}
+      <a class="method" href="{{ url_for('payment.vietqr', txn_ref=t.txn_ref) }}">
+        <span class="mlogo bg-soft-primary"><i class="bi bi-qr-code-scan"></i></span>
+        <div><div class="fw-bold">Chuyển khoản bằng mã VietQR <span class="badge text-bg-success ms-1">Khuyên dùng</span></div>
+          <small class="text-muted">Quét mã bằng ứng dụng của bất kỳ ngân hàng nào. Miễn phí, gạch nợ tự động.</small></div>
+        <i class="bi bi-chevron-right chev"></i>
+      </a>
+      {% endif %}
+      {% if cfg.ENABLE_VNPAY %}
+      <a class="method {{ '' if vnpay_ready else 'disabled' }}" href="{{ url_for('payment.vnpay', txn_ref=t.txn_ref) }}">
+        <span class="mlogo bg-soft-danger"><i class="bi bi-credit-card-2-front"></i></span>
+        <div><div class="fw-bold">Cổng thanh toán VNPay</div>
+          <small class="text-muted">Thẻ ATM nội địa, Internet Banking, Visa/Master/JCB, ví VNPay.
+          {% if not vnpay_ready %}<br><span class="text-danger">Chưa cấu hình mã sandbox (xem README).</span>{% endif %}</small></div>
+        <i class="bi bi-chevron-right chev"></i>
+      </a>
+      {% endif %}
+      {% if cfg.ENABLE_SIMULATOR %}
+      <a class="method" href="{{ url_for('payment.simulator', txn_ref=t.txn_ref) }}">
+        <span class="mlogo" style="background:#eef0f4;color:#475569"><i class="bi bi-phone"></i></span>
+        <div><div class="fw-bold">Cổng thanh toán mô phỏng <span class="badge text-bg-secondary ms-1">Demo</span></div>
+          <small class="text-muted">Dùng để trình diễn khi không có mạng hoặc chưa đăng ký sandbox.</small></div>
+        <i class="bi bi-chevron-right chev"></i>
+      </a>
+      {% endif %}
+      {% if not (cfg.ENABLE_VIETQR or cfg.ENABLE_VNPAY or cfg.ENABLE_SIMULATOR) %}
+      <div class="alert alert-warning">Các kênh thanh toán trực tuyến đang tạm ngừng. Vui lòng nộp tại quầy hoặc thử lại sau.</div>
+      {% endif %}
+      <form method="post" action="{{ url_for('payment.cancel', txn_ref=t.txn_ref) }}" class="mt-3">
+        <button class="btn btn-link text-muted p-0"><i class="bi bi-arrow-left"></i> Huỷ và quay lại</button>
+      </form>
+    </div>
+    <div class="col-md-5">
+      <div class="card">
+        <div class="card-header">Đơn hàng</div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-2"><span class="text-muted">Sinh viên</span><b>{{ inv.full_name }}</b></div>
+          <div class="d-flex justify-content-between mb-2"><span class="text-muted">Mã SV</span><b>{{ inv.student_code }}</b></div>
+          <div class="d-flex justify-content-between mb-2"><span class="text-muted">Nội dung</span><b>Học phí đợt {% for i in inv.installments if i.id|string in t.installment_ids.split(',') %}{{ i.seq }}{{ ', ' if not loop.last }}{% endfor %}</b></div>
+          <div class="d-flex justify-content-between mb-2"><span class="text-muted">Tiền học phí</span><b class="money">{{ t.principal|vnd }}</b></div>
+          {% if t.late_fee %}<div class="d-flex justify-content-between mb-2"><span class="text-muted">Phí trễ hạn</span><b class="money text-danger">{{ t.late_fee|vnd }}</b></div>{% endif %}
+          <div class="d-flex justify-content-between mb-2"><span class="text-muted">Phí giao dịch</span><b class="text-success">Miễn phí</b></div>
+          <hr>
+          <div class="d-flex justify-content-between align-items-center"><span class="fw-semibold">Tổng thanh toán</span><span class="fs-4 fw-bold text-primary money">{{ t.amount|vnd }}</span></div>
+        </div>
+      </div>
+      <div class="small text-muted mt-3"><i class="bi bi-shield-check text-success me-1"></i>Dữ liệu thanh toán được ký số HMAC-SHA512 và xác thực trước khi gạch nợ.</div>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}

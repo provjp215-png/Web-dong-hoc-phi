@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Duyệt đăng ký{% endblock %}
+{% block content %}
+<div class="page-title">Duyệt đăng ký tài khoản sinh viên</div>
+<div class="page-sub">Đối chiếu với hồ sơ sinh viên (mã SV, họ tên, ngành) trước khi kích hoạt. Tài khoản chưa duyệt không thể đăng nhập.</div>
+<form method="post">
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center flex-wrap gap-2">
+    <span>Đang chờ duyệt ({{ pending|length }})</span>
+    {% if pending %}
+    <div class="ms-auto d-flex gap-2 align-items-center">
+      <input name="reason" class="form-control form-control-sm" style="width:280px" placeholder="Lý do từ chối (nếu từ chối)">
+      <button name="action" value="reject" class="btn btn-sm btn-outline-danger" onclick="return confirm('Từ chối các đăng ký đã chọn?')">Từ chối</button>
+      <button name="action" value="approve" class="btn btn-sm btn-success">Duyệt các mục đã chọn</button>
+    </div>
+    {% endif %}
+  </div>
+  <div class="table-responsive"><table class="table table-hover">
+    <thead><tr><th><input type="checkbox" class="form-check-input" onclick="document.querySelectorAll('.reg-check').forEach(c => c.checked = this.checked)"></th>
+      <th>Mã SV</th><th>Họ và tên</th><th>Ngành / Lớp</th><th>Liên hệ</th><th>Gửi lúc</th><th>Đối chiếu</th></tr></thead>
+    <tbody>{% for u in pending %}
+      <tr><td><input type="checkbox" class="form-check-input reg-check" name="ids" value="{{ u.id }}"></td>
+        <td class="fw-semibold">{{ u.student_code }}</td><td>{{ u.full_name }}</td>
+        <td>{{ u.faculty }}<br><small class="text-muted">{{ u.class_name or '—' }}</small></td>
+        <td class="small">{{ u.email }}<br>{{ u.phone or '' }}</td><td class="small">{{ u.created_at }}</td>
+        <td class="small">{% if warn.get(u.id) %}<span class="text-danger">{{ warn[u.id] }}</span>{% else %}<span class="text-success">Không trùng</span>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="7" class="text-center text-muted py-4">Không có đăng ký nào đang chờ</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+</form>
+<div class="card"><div class="card-header">Đã xử lý gần đây</div>
+  <table class="table"><tbody>{% for d in decided %}
+    <tr><td class="small text-nowrap">{{ d.created_at }}</td><td>{{ d.target }} · {{ d.full_name or '' }}</td>
+      <td>{% if d.action == 'registration_approve' %}<span class="badge text-bg-success">Đã duyệt</span>{% else %}<span class="badge text-bg-secondary">Từ chối</span> <small class="text-muted">{{ d.detail }}</small>{% endif %}</td>
+      <td class="small text-muted">bởi {{ d.username }}</td></tr>
+  {% else %}<tr><td class="text-muted">Chưa có</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endblock %}

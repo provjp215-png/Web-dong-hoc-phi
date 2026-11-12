@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, method_icon with context %}
+{% block title %}Giao dịch & đối soát{% endblock %}
+{% block content %}
+<div class="page-title">Giao dịch & đối soát</div>
+<div class="page-sub">Giao dịch khớp số tiền được gạch nợ tự động. Giao dịch lệch tiền chuyển sang trạng thái <b>Cần kiểm tra</b>.</div>
+<ul class="nav nav-pills mb-3 gap-1">
+  {% for k, lb in [('', 'Tất cả'), ('success', 'Thành công'), ('pending', 'Chờ thanh toán'), ('review', 'Cần kiểm tra'), ('failed', 'Thất bại')] %}
+  <li class="nav-item"><a class="nav-link {{ 'active' if st == k }}" href="{{ url_for('accountant.transactions', tt=k) }}">{{ lb }}</a></li>
+  {% endfor %}
+</ul>
+<div class="card"><div class="table-responsive">
+  <table class="table table-hover">
+    <thead><tr><th>Tạo lúc</th><th>Sinh viên</th><th>Mã giao dịch</th><th>Kênh</th><th class="text-end">Cần thu</th><th class="text-end">Thực nhận</th><th>Trạng thái</th><th>Ghi chú</th><th>Thao tác</th></tr></thead>
+    <tbody>{% for r in rows %}
+      <tr>
+        <td class="small">{{ r.created_at }}</td>
+        <td>{{ r.full_name }}<br><small class="text-muted">{{ r.student_code }}</small></td>
+        <td><code>{{ r.txn_ref }}</code>{% if r.gateway_txn_no %}<br><small class="text-muted">{{ r.bank_code }} · {{ r.gateway_txn_no }}</small>{% endif %}</td>
+        <td>{{ method_icon(r.method) }} {{ METHOD_LABEL.get(r.method, r.method) }}</td>
+        <td class="text-end money">{{ r.amount|vnd }}</td>
+        <td class="text-end money {{ 'text-danger fw-bold' if r.received_amount is not none and r.received_amount != r.amount }}">{{ r.received_amount|vnd if r.received_amount is not none else '—' }}</td>
+        <td>{{ status_badge(r.status) }}</td>
+        <td class="small text-muted" style="max-width:220px">{{ r.note or '' }}</td>
+        <td class="text-nowrap">
+          {% if r.status == 'review' and r.id in waiting %}
+            <span class="badge text-bg-warning"><i class="bi bi-hourglass-split"></i> Chờ admin phê duyệt</span>
+          {% elif r.status == 'review' %}
+            <form method="post" class="d-inline"><input type="hidden" name="id" value="{{ r.id }}"><button name="action" value="approve" class="btn btn-sm btn-success" title="{{ 'Gửi đề nghị để quản trị viên phê duyệt' if cfg_live.MAKER_CHECKER else 'Chấp nhận, gạch nợ' }}">{{ 'Đề nghị duyệt' if cfg_live.MAKER_CHECKER else 'Duyệt' }}</button>
+              <button name="action" value="reject" class="btn btn-sm btn-outline-danger" title="Từ chối, hoàn tiền">Từ chối</button></form>
+          {% elif r.status == 'pending' and r.method == 'vietqr' %}
+            <form method="post" class="d-inline"><input type="hidden" name="id" value="{{ r.id }}"><button name="action" value="simulate_bank" class="btn btn-sm btn-outline-primary" title="Demo: giả lập ngân hàng gửi webhook báo có">Giả lập báo có</button></form>
+          {% elif r.receipt_no %}
+            <a class="btn btn-sm btn-outline-secondary" target="_blank" href="{{ url_for('receipt_pdf', receipt_no=r.receipt_no) }}"><i class="bi bi-file-earmark-pdf"></i></a>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}<tr><td colspan="9" class="text-center text-muted py-4">Không có giao dịch</td></tr>{% endfor %}</tbody>
+  </table>
+</div></div>
+{% endblock %}

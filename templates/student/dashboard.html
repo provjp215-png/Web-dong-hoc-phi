@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, method_icon with context %}
+{% block title %}Tổng quan{% endblock %}
+{% block content %}
+<div class="page-title">Xin chào, {{ g.user.full_name }} 👋</div>
+<div class="page-sub">{{ g.user.student_code }} · {{ g.user.class_name }} · Khoa {{ g.user.faculty }}</div>
+
+{% set nxt = upcoming[0] if upcoming else None %}
+{% if nxt and (nxt[1].overdue or nxt[1].days_left <= remind_days) %}
+<div class="alert {{ 'alert-danger' if nxt[1].overdue else 'alert-warning' }} d-flex align-items-center gap-3">
+  <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+  <div class="flex-grow-1">
+    {% if nxt[1].overdue %}
+      <b>Học phí đợt {{ nxt[1].seq }} – {{ nxt[0].semester_name }} đã quá hạn {{ nxt[1].overdue_days }} ngày.</b>
+      Phí trễ hạn tạm tính: <b>{{ nxt[1].late_fee|vnd }}</b> và tăng theo từng ngày.
+    {% else %}
+      <b>Học phí đợt {{ nxt[1].seq }} đến hạn sau {{ nxt[1].days_left }} ngày</b> ({{ nxt[1].due_date }}).
+    {% endif %}
+  </div>
+  <a href="{{ url_for('student.invoice', invoice_id=nxt[0].id) }}" class="btn btn-sm {{ 'btn-danger' if nxt[1].overdue else 'btn-warning' }}">Thanh toán ngay</a>
+</div>
+{% endif %}
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-5">
+    <div class="balance-card h-100">
+      <div class="opacity-75 mb-1">Tổng số tiền cần thanh toán</div>
+      <div class="amount money">{{ (totals.outstanding + totals.late_fee)|vnd }}</div>
+      {% if totals.late_fee %}
+      <div class="late-fee-pill">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+        Đã bao gồm <b>{{ totals.late_fee|vnd }}</b> phí trễ hạn
+      </div>
+      {% endif %}
+      <div class="d-flex gap-2 mt-4 position-relative" style="z-index:1">
+        {% if nxt %}<a href="{{ url_for('student.invoice', invoice_id=nxt[0].id) }}" class="btn btn-light"><i class="bi bi-wallet2 me-1"></i>Thanh toán</a>{% endif %}
+        <a href="{{ url_for('student.history') }}" class="btn btn-outline-light"><i class="bi bi-clock-history me-1"></i>Lịch sử</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="row g-3 h-100">
+      <div class="col-sm-6"><div class="card stat h-100"><div class="icon bg-soft-primary"><i class="bi bi-journal-text"></i></div><div><div class="label">Tổng phải nộp (sau miễn giảm)</div><div class="value money">{{ totals.total|vnd }}</div></div></div></div>
+      <div class="col-sm-6"><div class="card stat h-100"><div class="icon bg-soft-success"><i class="bi bi-check2-circle"></i></div><div><div class="label">Đã nộp</div><div class="value money">{{ totals.paid|vnd }}</div></div></div></div>
+      <div class="col-sm-6"><div class="card stat h-100"><div class="icon bg-soft-danger"><i class="bi bi-hourglass-split"></i></div><div><div class="label">Còn nợ</div><div class="value money">{{ totals.outstanding|vnd }}</div></div></div></div>
+      <div class="col-sm-6"><div class="card stat h-100"><div class="icon bg-soft-warning"><i class="bi bi-calendar-event"></i></div><div><div class="label">Hạn nộp gần nhất</div><div class="value">{{ nxt[1].due_date if nxt else '—' }}</div></div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-8" id="hoc-phi">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between"><span><i class="bi bi-receipt me-2"></i>Học phí theo học kỳ</span></div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead><tr><th>Học kỳ</th><th class="text-end">Phải nộp</th><th class="text-end">Đã nộp</th><th class="text-end">Còn nợ</th><th>Số đợt</th><th>Trạng thái</th><th></th></tr></thead>
+          <tbody>
+          {% for inv in invoices %}
+            <tr>
+              <td><b>{{ inv.semester_name }}</b><br><small class="text-muted">{{ inv.code }}</small></td>
+              <td class="text-end money">{{ inv.total|vnd }}</td>
+              <td class="text-end money text-success">{{ inv.paid|vnd }}</td>
+              <td class="text-end money {{ 'text-danger fw-semibold' if inv.outstanding }}">{{ inv.outstanding|vnd }}</td>
+              <td>{{ inv.installments|length }}</td>
+              <td>{{ status_badge(inv.display_status) }}</td>
+              <td class="text-end"><a class="btn btn-sm {{ 'btn-primary' if inv.outstanding else 'btn-outline-secondary' }}" href="{{ url_for('student.invoice', invoice_id=inv.id) }}">{{ 'Thanh toán' if inv.outstanding else 'Chi tiết' }}</a></td>
+            </tr>
+          {% else %}<tr><td colspan="7" class="text-center text-muted py-4">Chưa có hoá đơn học phí</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header d-flex justify-content-between"><span><i class="bi bi-arrow-left-right me-2"></i>Giao dịch gần đây</span><a href="{{ url_for('student.history') }}" class="small">Xem tất cả</a></div>
+      <ul class="list-group list-group-flush">
+        {% for t in txns %}
+        <li class="list-group-item d-flex align-items-center gap-3 py-3">
+          <span class="fs-4">{{ method_icon(t.method) }}</span>
+          <div class="flex-grow-1"><div class="fw-semibold">{{ METHOD_LABEL.get(t.method, t.method) }}</div><small class="text-muted">{{ t.txn_ref }} · {{ t.paid_at or t.created_at }}</small></div>
+          <div class="text-end"><div class="fw-bold money">{{ t.amount|vnd }}</div>{{ status_badge(t.status) }}</div>
+        </li>
+        {% else %}<li class="list-group-item text-muted text-center py-4">Chưa có giao dịch</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-calendar3 me-2"></i>Lịch nộp sắp tới</div>
+      <div class="card-body">
+        {% for inv, i in upcoming[:5] %}
+          <div class="d-flex align-items-center mb-3">
+            <span class="timeline-dot {{ 'bg-danger' if i.overdue else ('bg-warning' if i.days_left <= remind_days else 'bg-primary') }}"></span>
+            <div class="flex-grow-1"><div class="fw-semibold">Đợt {{ i.seq }} · {{ inv.semester_code }}</div>
+              <small class="{{ 'text-danger' if i.overdue else 'text-muted' }}">{{ i.due_date }} · {% if i.overdue %}quá hạn {{ i.overdue_days }} ngày{% else %}còn {{ i.days_left }} ngày{% endif %}</small></div>
+            <b class="money">{{ i.outstanding|vnd }}</b>
+          </div>
+        {% else %}<div class="text-muted text-center"><i class="bi bi-emoji-smile fs-3 d-block mb-2"></i>Bạn đã hoàn thành mọi khoản học phí</div>{% endfor %}
+      </div>
+    </div>
+    <div class="card mt-4">
+      <div class="card-header d-flex justify-content-between"><span><i class="bi bi-bell me-2"></i>Thông báo</span><a class="small" href="{{ url_for('student.notifications') }}">Tất cả</a></div>
+      <ul class="list-group list-group-flush">
+        {% for n in notes %}<li class="list-group-item py-3"><div class="fw-semibold {{ '' if n.is_read else 'text-primary' }}">{{ n.title }}</div><small class="text-muted">{{ n.created_at }}</small></li>
+        {% else %}<li class="list-group-item text-muted">Không có thông báo</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

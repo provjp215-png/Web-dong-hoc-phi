@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge with context %}
+{% block title %}Học phí {{ inv.semester_code }}{% endblock %}
+{% block content %}
+<nav class="small mb-2"><a href="{{ url_for('student.dashboard') }}">Tổng quan</a> / Học phí</nav>
+<div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+  <div><div class="page-title mb-0">{{ inv.semester_name }}</div><div class="text-muted">Mã hoá đơn {{ inv.code }} · {{ inv.credits }} tín chỉ</div></div>
+  <div class="ms-auto">{{ status_badge(inv.display_status) }}</div>
+</div>
+
+<form method="post" action="{{ url_for('student.checkout') }}" id="payForm">
+<input type="hidden" name="invoice_id" value="{{ inv.id }}">
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-list-ul me-2"></i>Chi tiết các khoản thu</div>
+      <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>#</th><th>Nội dung</th><th class="text-end">Số lượng</th><th class="text-end">Đơn giá</th><th class="text-end">Thành tiền</th></tr></thead>
+        <tbody>
+          {% for l in inv.lines %}
+          <tr><td>{{ loop.index }}</td><td>{{ l.description }}</td><td class="text-end">{{ l.quantity }}</td><td class="text-end money">{{ l.unit_price|vnd }}</td><td class="text-end money">{{ l.amount|vnd }}</td></tr>
+          {% endfor %}
+          {% for d in inv.discounts %}
+          <tr class="text-success"><td><i class="bi bi-award"></i></td><td colspan="3">{{ d.description }}{% if d.percent %} ({{ d.percent|round|int }}% học phí){% endif %}</td><td class="text-end money">− {{ d.computed|vnd }}</td></tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr><th colspan="4" class="text-end">Tổng phải nộp</th><th class="text-end money fs-5 text-primary">{{ inv.total|vnd }}</th></tr>
+          <tr><td colspan="5" class="text-end small text-muted fst-italic">Bằng chữ: {{ inv.total|words }}</td></tr>
+        </tfoot>
+      </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex align-items-center flex-wrap gap-2">
+        <span><i class="bi bi-calendar2-week me-2"></i>Các đợt nộp — chọn khoản muốn thanh toán</span>
+        {% if inv.paid == 0 and inv.total > 0 %}
+        <div class="ms-auto d-flex align-items-center gap-2">
+          <small class="text-muted">Hình thức nộp:</small>
+          <select class="form-select form-select-sm w-auto" form="planForm" name="n" onchange="document.getElementById('planForm').submit()">
+            {% for n in range(1, cfg.MAX_INSTALLMENTS + 1) %}
+              <option value="{{ n }}" {{ 'selected' if inv.installments|length == n }}>{{ 'Nộp 1 lần' if n == 1 else 'Trả góp ' ~ n ~ ' đợt' }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        {% for i in inv.installments %}
+          {% set done = i.outstanding <= 0 %}
+          <label class="inst-row {{ 'done' if done }}" data-amount="{{ i.outstanding + i.late_fee }}" data-seq="{{ i.seq }}">
+            <input type="checkbox" class="form-check-input inst-check" name="installment_ids" value="{{ i.id }}" {{ 'disabled' if done }}>
+            <div class="flex-grow-1">
+              <div class="fw-semibold">Đợt {{ i.seq }}{% if done %} <i class="bi bi-check-circle-fill text-success"></i>{% endif %}</div>
+              <small class="text-muted">Hạn nộp {{ i.due_date }}
+                {% if done %}· đã nộp {{ i.paid_at }}
+                {% elif i.overdue %}· <span class="text-danger fw-semibold">quá hạn {{ i.overdue_days }} ngày</span>
+                {% else %}· còn {{ i.days_left }} ngày{% endif %}</small>
+            </div>
+            <div class="text-end">
+              <div class="fw-bold money">{{ (i.amount if done else i.outstanding)|vnd }}</div>
+              {% if i.late_fee %}<small class="text-danger">+ {{ i.late_fee|vnd }} phí trễ hạn</small>{% endif %}
+              {% if done and i.late_fee_paid %}<small class="text-muted">đã nộp phí trễ {{ i.late_fee_paid|vnd }}</small>{% endif %}
+            </div>
+          </label>
+        {% endfor %}
+        <div class="small text-muted mt-2"><i class="bi bi-info-circle me-1"></i>Phí trễ hạn: {{ (cfg.LATE_FEE_RATE_PER_DAY*100)|round(3) }}%/ngày trên số tiền quá hạn, tối đa {{ (cfg.LATE_FEE_MAX_RATE*100)|int }}%. Các đợt phải được nộp theo thứ tự.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card summary-sticky">
+      <div class="card-header"><i class="bi bi-wallet2 me-2"></i>Thông tin thanh toán</div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between mb-2"><span class="text-muted">Sinh viên</span><b>{{ inv.full_name }}</b></div>
+        <div class="d-flex justify-content-between mb-2"><span class="text-muted">Mã SV</span><b>{{ inv.student_code }}</b></div>
+        <div class="d-flex justify-content-between mb-2"><span class="text-muted">Đã nộp</span><b class="money text-success">{{ inv.paid|vnd }}</b></div>
+        <div class="d-flex justify-content-between mb-3"><span class="text-muted">Còn nợ</span><b class="money">{{ inv.outstanding|vnd }}</b></div>
+        <hr>
+        <div class="d-flex justify-content-between align-items-end">
+          <span class="text-muted">Số khoản đã chọn: <b id="selCount">0</b></span>
+        </div>
+        <div class="text-muted small mt-2">Tổng thanh toán</div>
+        <div class="fs-3 fw-bold text-primary money" id="selTotal">0 ₫</div>
+        <button class="btn btn-primary w-100 py-2 mt-3 fw-semibold" id="payBtn" disabled><i class="bi bi-shield-lock me-1"></i>Tiếp tục thanh toán</button>
+        <div class="text-center small text-muted mt-3"><i class="bi bi-qr-code me-1"></i>VietQR &nbsp; <i class="bi bi-credit-card me-1"></i>VNPay · ATM · Visa/Master</div>
+      </div>
+    </div>
+  </div>
+</div>
+</form>
+<form method="post" id="planForm" action="{{ url_for('student.installment_plan', invoice_id=inv.id) }}"></form>
+{% endblock %}
+{% block scripts %}
+<script>
+  initInstallmentPicker();
+</script>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Phê duyệt hai cấp{% endblock %}
+{% block content %}
+<div class="page-title">Phê duyệt hai cấp (maker – checker)</div>
+<div class="page-sub">Kế toán lập đề nghị → quản trị viên kiểm tra và phê duyệt thì nghiệp vụ mới có hiệu lực. Giúp ngăn sai sót và gian lận do một người tự thực hiện.</div>
+{% for a in rows %}{% set d = details[a.id] %}
+<div class="card mb-3 {{ '' if a.status == 'pending' else 'opacity-75' }}">
+  <div class="card-body">
+    <div class="d-flex flex-wrap align-items-start gap-3">
+      <div class="flex-grow-1">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge text-bg-{{ ST[a.status][1] }}">{{ ST[a.status][0] }}</span>
+          <b>#{{ a.id }} · {{ KIND[a.kind] }}</b>
+        </div>
+        <div class="mb-2">{{ a.summary }}</div>
+        {% if a.kind == 'review_txn' and d.txn %}
+          <div class="small text-muted">Sinh viên {{ d.txn.full_name }} ({{ d.txn.student_code }}) · Cần thu <b>{{ d.txn.amount|vnd }}</b> · Ngân hàng báo có <b class="text-danger">{{ (d.txn.received_amount or 0)|vnd }}</b> · Lệch <b>{{ ((d.txn.received_amount or 0) - d.txn.amount)|vnd }}</b> · Mã NH {{ d.txn.gateway_txn_no or '—' }}</div>
+        {% elif a.kind == 'discount' and d.inv %}
+          <div class="small text-muted">Sinh viên {{ d.inv.full_name }} ({{ d.inv.student_code }}) · Học phí {{ d.tuition|vnd }} · Đề nghị:
+            <b>{% if d.percent %}{{ d.percent }}% học phí ≈ {{ (d.tuition * d.percent / 100)|round|int|vnd }}{% else %}{{ d.amount|vnd }}{% endif %}</b> · {{ 'Học bổng' if d.kind == 'scholarship' else 'Miễn giảm chính sách' }}</div>
+        {% endif %}
+        <div class="small text-muted mt-1">Đề nghị bởi <b>{{ a.requester }}</b> lúc {{ a.created_at }}
+          {% if a.decided_at %} · {{ ST[a.status][0] }} bởi <b>{{ a.decider }}</b> lúc {{ a.decided_at }}{% if a.note %} – {{ a.note }}{% endif %}{% endif %}</div>
+      </div>
+      {% if a.status == 'pending' %}
+      <form method="post" class="d-flex gap-2 align-items-start" style="min-width:340px">
+        <input type="hidden" name="id" value="{{ a.id }}">
+        <input name="note" class="form-control form-control-sm" placeholder="Ghi chú (không bắt buộc)">
+        <button name="action" value="reject" class="btn btn-sm btn-outline-danger">Từ chối</button>
+        <button name="action" value="approve" class="btn btn-sm btn-success text-nowrap">Phê duyệt</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="card"><div class="card-body text-center text-muted py-5">Chưa có đề nghị nào. Đề nghị được tạo khi kế toán bấm "Đề nghị duyệt" giao dịch lệch tiền, hoặc áp dụng miễn giảm vượt {{ cfg_live.APPROVAL_DISCOUNT_PERCENT }}% học phí.</div></div>
+{% endfor %}
+{% endblock %}

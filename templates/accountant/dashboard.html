@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, method_icon with context %}
+{% block title %}Tổng quan thu học phí{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-start gap-3 mb-4">
+  <div><div class="page-title">Tổng quan thu học phí</div><div class="text-muted">Số liệu cập nhật theo thời gian thực từ các kênh thanh toán</div></div>
+  <div class="ms-auto">{% include "accountant/_semester_picker.html" %}</div>
+</div>
+{% if review_count %}
+<div class="alert alert-warning d-flex align-items-center"><i class="bi bi-exclamation-diamond me-2 fs-5"></i>Có <b class="mx-1">{{ review_count }}</b> giao dịch lệch số tiền cần kiểm tra.
+  <a class="ms-auto btn btn-sm btn-warning" href="{{ url_for('accountant.transactions', tt='review') }}">Xử lý ngay</a></div>
+{% endif %}
+{% if rep %}{% set t = rep.totals %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3"><div class="card stat h-100"><div class="icon bg-soft-primary"><i class="bi bi-cash-stack"></i></div><div><div class="label">Phải thu (sau miễn giảm)</div><div class="value money">{{ t.total|vnd }}</div></div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card stat h-100"><div class="icon bg-soft-success"><i class="bi bi-graph-up-arrow"></i></div><div><div class="label">Đã thu · {{ t.rate }}%</div><div class="value money">{{ t.paid|vnd }}</div></div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card stat h-100"><div class="icon bg-soft-danger"><i class="bi bi-hourglass-split"></i></div><div><div class="label">Còn phải thu</div><div class="value money">{{ t.outstanding|vnd }}</div></div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card stat h-100"><div class="icon bg-soft-warning"><i class="bi bi-award"></i></div><div><div class="label">Miễn giảm & học bổng</div><div class="value money">{{ t.discount|vnd }}</div></div></div></div>
+</div>
+<div class="card mb-4"><div class="card-body">
+  <div class="d-flex justify-content-between mb-2"><b>Tiến độ thu học phí</b><span class="text-muted">{{ rep.by_status.paid }}/{{ t.count }} sinh viên đã hoàn thành</span></div>
+  <div class="progress" style="height:14px"><div class="progress-bar bg-success" style="width: {{ t.rate }}%">{{ t.rate }}%</div></div>
+</div></div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Tình trạng hoá đơn</div><div class="card-body"><canvas id="cStatus" height="230"></canvas></div></div></div>
+  <div class="col-lg-8"><div class="card h-100"><div class="card-header">Tỷ lệ hoàn thành theo khoa</div><div class="card-body"><canvas id="cFaculty" height="120"></canvas></div></div></div>
+  <div class="col-lg-8"><div class="card h-100"><div class="card-header">Tiền thu theo ngày</div><div class="card-body"><canvas id="cDay" height="120"></canvas></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Kênh thanh toán</div><div class="card-body"><canvas id="cMethod" height="230"></canvas></div></div></div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between"><span>Giao dịch mới nhất</span><a class="small" href="{{ url_for('accountant.transactions') }}">Tất cả</a></div>
+  <div class="table-responsive"><table class="table table-hover">
+    <thead><tr><th>Thời gian</th><th>Sinh viên</th><th>Mã giao dịch</th><th>Kênh</th><th class="text-end">Số tiền</th><th>Trạng thái</th></tr></thead>
+    <tbody>{% for r in recent %}
+      <tr><td>{{ r.paid_at or r.created_at }}</td><td>{{ r.full_name }}<br><small class="text-muted">{{ r.student_code }}</small></td><td><code>{{ r.txn_ref }}</code></td>
+        <td>{{ method_icon(r.method) }} {{ METHOD_LABEL.get(r.method, r.method) }}</td><td class="text-end money fw-semibold">{{ r.amount|vnd }}</td><td>{{ status_badge(r.status) }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if rep %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  Chart.defaults.font.family = "Be Vietnam Pro, system-ui, sans-serif";
+  const vnd = v => v.toLocaleString("vi-VN") + " ₫";
+  const st = {{ rep.by_status|tojson }};
+  new Chart(document.getElementById("cStatus"), {type: "doughnut", data: {labels: ["Đã hoàn thành", "Nộp một phần", "Chưa nộp", "Quá hạn"],
+    datasets: [{data: [st.paid, st.partial, st.unpaid, st.overdue], backgroundColor: ["#1f701f", "#f59e0b", "#94a3b8", "#b8021e"]}]},
+    options: {plugins: {legend: {position: "bottom"}}, cutout: "62%"}});
+  const fac = {{ rep.by_faculty|tojson }};
+  const fn = Object.keys(fac);
+  new Chart(document.getElementById("cFaculty"), {type: "bar", data: {labels: fn, datasets: [
+      {label: "Đã thu", data: fn.map(k => fac[k].paid), backgroundColor: "#b8021e", borderRadius: 6},
+      {label: "Còn phải thu", data: fn.map(k => fac[k].total - fac[k].paid), backgroundColor: "#f1c6cd", borderRadius: 6}]},
+    options: {scales: {x: {stacked: true}, y: {stacked: true, ticks: {callback: v => (v / 1e6) + "tr"}}},
+      plugins: {tooltip: {callbacks: {label: c => c.dataset.label + ": " + vnd(c.raw)}}}}});
+  const day = {{ rep.by_day|map('list')|list|tojson }};
+  new Chart(document.getElementById("cDay"), {type: "line", data: {labels: day.map(d => d[0]), datasets: [{label: "Tiền thu", data: day.map(d => d[1]),
+      borderColor: "#b8021e", backgroundColor: "rgba(184,2,30,.10)", fill: true, tension: .3}]},
+    options: {plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => vnd(c.raw)}}}, scales: {y: {ticks: {callback: v => (v / 1e6) + "tr"}}}}});
+  const md = {{ rep.by_method|map('list')|list|tojson }};
+  const ml = {{ METHOD_LABEL|tojson }};
+  new Chart(document.getElementById("cMethod"), {type: "pie", data: {labels: md.map(m => ml[m[0]] || m[0]), datasets: [{data: md.map(m => m[2]),
+      backgroundColor: ["#b8021e", "#1f701f", "#f59e0b", "#64748b"]}]},
+    options: {plugins: {legend: {position: "bottom"}, tooltip: {callbacks: {label: c => vnd(c.raw)}}}}});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge with context %}
+{% block title %}Công nợ học phí{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-start gap-3 mb-3">
+  <div><div class="page-title">Công nợ học phí</div><div class="text-muted">{{ rows|length }} hoá đơn</div></div>
+</div>
+<div class="card mb-3"><div class="card-body">
+  <form class="row g-2 align-items-center">
+    <div class="col-md-3"><select name="hk" class="form-select">{% for s in semesters %}<option value="{{ s.id }}" {{ 'selected' if s.id == sid }}>{{ s.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><input name="q" value="{{ q }}" class="form-control" placeholder="Tìm tên hoặc mã sinh viên"></div>
+    <div class="col-md-2"><select name="khoa" class="form-select"><option value="">Tất cả khoa</option>{% for f in faculties %}<option {{ 'selected' if f == fac }}>{{ f }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><select name="tt" class="form-select"><option value="">Mọi trạng thái</option>
+      {% for k in ['paid','partial','unpaid','overdue'] %}<option value="{{ k }}" {{ 'selected' if k == st }}>{{ STATUS_LABEL[k][0] }}</option>{% endfor %}</select></div>
+    <div class="col-md-2 d-grid"><button class="btn btn-primary"><i class="bi bi-funnel me-1"></i>Lọc</button></div>
+  </form>
+</div></div>
+<div class="card"><div class="table-responsive">
+  <table class="table table-hover">
+    <thead><tr><th>Mã SV</th><th>Họ tên</th><th>Khoa</th><th class="text-end">Phải nộp</th><th class="text-end">Đã nộp</th><th class="text-end">Còn nợ</th><th class="text-end">Phí trễ tạm tính</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody>{% for r in rows %}
+      <tr>
+        <td>{{ r.student_code }}</td><td class="fw-semibold">{{ r.full_name }}</td><td>{{ r.faculty }}</td>
+        <td class="text-end money">{{ r.total|vnd }}</td><td class="text-end money text-success">{{ r.paid|vnd }}</td>
+        <td class="text-end money {{ 'text-danger fw-semibold' if r.outstanding }}">{{ r.outstanding|vnd }}</td>
+        <td class="text-end money {{ 'text-danger' if r.late_fee_due }}">{{ r.late_fee_due|vnd if r.late_fee_due else '—' }}</td>
+        <td>{{ status_badge(r.display_status) }}</td>
+        <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('accountant.invoice_detail', invoice_id=r.id) }}">Chi tiết</a></td>
+      </tr>
+    {% else %}<tr><td colspan="9" class="text-center text-muted py-4">Không có dữ liệu</td></tr>{% endfor %}</tbody>
+  </table>
+</div></div>
+{% endblock %}

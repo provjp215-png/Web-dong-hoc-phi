@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, method_icon with context %}
+{% block title %}Lịch sử giao dịch{% endblock %}
+{% block content %}
+<div class="page-title">Lịch sử giao dịch</div>
+<div class="page-sub">Tất cả giao dịch thanh toán học phí và biên lai điện tử của bạn</div>
+<div class="card">
+  <div class="table-responsive">
+  <table class="table table-hover">
+    <thead><tr><th>Thời gian</th><th>Mã giao dịch</th><th>Học kỳ</th><th>Phương thức</th><th class="text-end">Số tiền</th><th>Trạng thái</th><th>Biên lai</th></tr></thead>
+    <tbody>
+    {% for t in txns %}
+      <tr>
+        <td>{{ t.paid_at or t.created_at }}</td>
+        <td><code>{{ t.txn_ref }}</code></td>
+        <td>{{ t.semester_name }}</td>
+        <td>{{ method_icon(t.method) }} {{ METHOD_LABEL.get(t.method, t.method) }}</td>
+        <td class="text-end money fw-semibold">{{ t.amount|vnd }}{% if t.late_fee %}<br><small class="text-danger">gồm {{ t.late_fee|vnd }} phí trễ</small>{% endif %}</td>
+        <td>{{ status_badge(t.status) }}</td>
+        <td>
+          {% if t.receipt_no %}<a class="btn btn-sm btn-outline-primary" href="{{ url_for('receipt_pdf', receipt_no=t.receipt_no) }}" target="_blank"><i class="bi bi-file-earmark-pdf"></i> {{ t.receipt_no }}</a>
+          {% elif t.status == 'pending' %}<a class="btn btn-sm btn-primary" href="{{ url_for('payment.start', txn_ref=t.txn_ref) }}">Tiếp tục</a>{% endif %}
+        </td>
+      </tr>
+    {% else %}<tr><td colspan="7" class="text-center text-muted py-4">Chưa có giao dịch</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

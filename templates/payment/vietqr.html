@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Quét mã VietQR{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-xl-9">
+  <div class="page-title">Thanh toán bằng mã VietQR</div>
+  <div class="page-sub">Mở ứng dụng ngân hàng → Quét QR → Kiểm tra thông tin → Xác nhận chuyển khoản</div>
+  <div class="row g-4">
+    <div class="col-md-6 text-center">
+      <div class="card p-4">
+        <div class="qr-box mx-auto">
+          <div class="small fw-bold text-primary mb-1">VietQR · NAPAS 247</div>
+          <img src="{{ qr_url }}" alt="Mã VietQR" onerror="this.src='{{ qr_online }}'">
+        </div>
+        <div class="mt-3"><span class="pulse"></span> <span class="ms-1">Đang chờ ngân hàng xác nhận…</span></div>
+        <div class="small text-muted mt-1">Mã QR hết hạn sau <span class="countdown" id="cd">15:00</span></div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">Thông tin chuyển khoản</div>
+        <div class="card-body">
+          <div class="copy-row"><span class="k">Ngân hàng</span><span class="v">{{ cfg.BANK_NAME }}</span></div>
+          <div class="copy-row"><span class="k">Số tài khoản</span><span class="v">{{ cfg.BANK_ACCOUNT_NO }}<button class="btn-copy" data-copy="{{ cfg.BANK_ACCOUNT_NO }}"><i class="bi bi-copy"></i></button></span></div>
+          <div class="copy-row"><span class="k">Chủ tài khoản</span><span class="v">{{ cfg.BANK_ACCOUNT_NAME }}</span></div>
+          <div class="copy-row"><span class="k">Số tiền</span><span class="v text-primary fs-5 money">{{ t.amount|vnd }}<button class="btn-copy" data-copy="{{ t.amount }}"><i class="bi bi-copy"></i></button></span></div>
+          <div class="copy-row"><span class="k">Nội dung</span><span class="v text-danger">{{ t.txn_ref }}<button class="btn-copy" data-copy="{{ t.txn_ref }}"><i class="bi bi-copy"></i></button></span></div>
+        </div>
+      </div>
+      <div class="alert alert-warning small mt-3 mb-2"><i class="bi bi-exclamation-triangle me-1"></i>Giữ nguyên <b>nội dung</b> và <b>số tiền</b> để hệ thống tự động gạch nợ. Sai lệch sẽ được chuyển cho kế toán kiểm tra.</div>
+      <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{{ url_for('payment.start', txn_ref=t.txn_ref) }}"><i class="bi bi-arrow-left"></i> Đổi phương thức</a>
+        <form method="post" action="{{ url_for('payment.cancel', txn_ref=t.txn_ref) }}"><button class="btn btn-outline-danger">Huỷ giao dịch</button></form>
+      </div>
+      <details class="small text-muted mt-3">
+        <summary>Chạy demo: giả lập ngân hàng báo có</summary>
+        Đăng nhập tài khoản <code>ketoan</code> ở trình duyệt khác → <i>Giao dịch &amp; đối soát</i> → bấm "Giả lập báo có", hoặc gửi webhook:
+        <pre class="bg-light p-2 rounded mt-2 mb-0" style="white-space:pre-wrap">curl -X POST {{ cfg.BASE_URL }}/webhook/bank -H "Authorization: Apikey {{ cfg.BANK_WEBHOOK_TOKEN }}" -H "Content-Type: application/json" -d "{\"content\":\"{{ t.txn_ref }}\",\"amount\":{{ t.amount }},\"reference\":\"FT001\"}"</pre>
+      </details>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  // Hỏi trạng thái mỗi 3 giây: khi webhook ngân hàng báo có, trang tự chuyển sang kết quả
+  const statusUrl = "{{ url_for('payment.status_api', txn_ref=t.txn_ref) }}";
+  setInterval(async () => {
+    try {
+      const r = await fetch(statusUrl); const d = await r.json();
+      if (d.status !== "pending") location.href = d.redirect;
+    } catch (e) {}
+  }, 3000);
+  let left = 15 * 60; const cd = document.getElementById("cd");
+  setInterval(() => { left = Math.max(0, left - 1); cd.textContent = String(Math.floor(left / 60)).padStart(2, "0") + ":" + String(left % 60).padStart(2, "0"); }, 1000);
+</script>
+{% endblock %}

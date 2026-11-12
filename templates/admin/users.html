@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "_macros.html" import user_status with context %}
+{% block title %}Tài khoản & phân quyền{% endblock %}
+{% block content %}
+<div class="page-title">Tài khoản & phân quyền</div>
+<div class="page-sub">Khoá / mở khoá, đặt lại mật khẩu, phân vai trò. Mọi thao tác đều được ghi vào nhật ký hệ thống.</div>
+<div class="row g-4">
+  <div class="col-xl-9">
+    <div class="card mb-3"><div class="card-body">
+      <form class="row g-2">
+        <div class="col-md-4"><input name="q" value="{{ q }}" class="form-control" placeholder="Tìm tên đăng nhập, họ tên, email"></div>
+        <div class="col-md-3"><select name="role" class="form-select"><option value="">Mọi vai trò</option>{% for k, v in ROLE_LABEL.items() %}<option value="{{ k }}" {{ 'selected' if role == k }}>{{ v }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><select name="status" class="form-select"><option value="">Mọi trạng thái</option>
+          <option value="active" {{ 'selected' if status == 'active' }}>Hoạt động</option>
+          <option value="locked" {{ 'selected' if status == 'locked' }}>Bị khoá</option>
+          <option value="temp_locked" {{ 'selected' if status == 'temp_locked' }}>Khoá tạm (sai mật khẩu)</option>
+          <option value="rejected" {{ 'selected' if status == 'rejected' }}>Đăng ký bị từ chối</option></select></div>
+        <div class="col-md-2 d-grid"><button class="btn btn-primary">Lọc</button></div>
+      </form>
+    </div></div>
+    <div class="card"><div class="table-responsive">
+      <table class="table table-hover">
+        <thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Trạng thái</th><th>Đăng nhập gần nhất</th><th class="text-end">Thao tác</th></tr></thead>
+        <tbody>{% for u in rows %}
+          <tr>
+            <td><div class="fw-semibold">{{ u.full_name }}{% if u.id == g.user.id %} <span class="badge text-bg-secondary">Bạn</span>{% endif %}</div>
+              <small class="text-muted">{{ u.username }}{% if u.email %} · {{ u.email }}{% endif %}{% if u.must_change_password %} · <span class="text-warning">chưa đổi MK tạm</span>{% endif %}</small></td>
+            <td>
+              <form method="post" class="d-flex gap-1" onsubmit="return confirm('Đổi vai trò của {{ u.username }}?')">
+                <input type="hidden" name="action" value="role"><input type="hidden" name="id" value="{{ u.id }}">
+                <select name="role" class="form-select form-select-sm" style="width:auto" onchange="this.form.requestSubmit()" {{ 'disabled' if u.id == g.user.id }}>
+                  {% for k, v in ROLE_LABEL.items() %}<option value="{{ k }}" {{ 'selected' if u.role == k }}>{{ v }}</option>{% endfor %}
+                </select>
+              </form>
+            </td>
+            <td>{{ user_status(u, now) }}{% if u.failed_attempts %}<div class="small text-danger">{{ u.failed_attempts }} lần sai MK</div>{% endif %}</td>
+            <td class="small text-muted">{{ u.last_login_at or '—' }}</td>
+            <td class="text-end text-nowrap">
+              <form method="post" class="d-inline"><input type="hidden" name="id" value="{{ u.id }}">
+                {% if u.status == 'locked' or (u.locked_until and u.locked_until > now) %}
+                  <button name="action" value="unlock" class="btn btn-sm btn-outline-success">Mở khoá</button>
+                {% elif u.status == 'active' and u.id != g.user.id %}
+                  <button name="action" value="lock" class="btn btn-sm btn-outline-danger" onclick="return confirm('Khoá tài khoản {{ u.username }}? Người này sẽ bị đăng xuất ngay.')">Khoá</button>
+                {% endif %}
+                <button name="action" value="reset_pw" class="btn btn-sm btn-outline-secondary" onclick="return confirm('Đặt lại mật khẩu {{ u.username }} về mật khẩu tạm?')">Đặt lại MK</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}<tr><td colspan="5" class="text-center text-muted py-4">Không có tài khoản phù hợp</td></tr>{% endfor %}</tbody>
+      </table>
+    </div></div>
+  </div>
+  <div class="col-xl-3">
+    <div class="card"><div class="card-header">Tạo tài khoản cán bộ</div><div class="card-body">
+      <form method="post" class="vstack gap-2">
+        <input type="hidden" name="action" value="create">
+        <input name="username" class="form-control" placeholder="Tên đăng nhập" required>
+        <input name="full_name" class="form-control" placeholder="Họ và tên / tên phòng ban">
+        <input name="email" type="email" class="form-control" placeholder="Email">
+        <select name="role" class="form-select"><option value="accountant">Kế toán</option><option value="admin">Quản trị viên</option></select>
+        <button class="btn btn-primary mt-1">Tạo tài khoản</button>
+        <small class="text-muted">Mật khẩu tạm là <code>{{ cfg_live.DEFAULT_PASSWORD }}</code>, người dùng phải đổi ở lần đăng nhập đầu.</small>
+      </form>
+    </div></div>
+    <div class="card mt-3"><div class="card-body small">
+      <div class="fw-semibold mb-2">Phân tách nhiệm vụ</div>
+      <div class="mb-1"><b>Quản trị viên:</b> tài khoản, cấu hình, bảo mật, sao lưu, phê duyệt đề nghị.</div>
+      <div class="mb-1"><b>Kế toán:</b> khoản thu, hoá đơn, thu tiền, đối soát, báo cáo.</div>
+      <div><b>Sinh viên:</b> xem học phí, thanh toán, tải biên lai.</div>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

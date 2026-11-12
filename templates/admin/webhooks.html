@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Nhật ký webhook{% endblock %}
+{% block content %}
+<div class="page-title">Nhật ký webhook & cổng thanh toán</div>
+<div class="page-sub">Mỗi lần ngân hàng (SePay/Casso) hoặc VNPay gọi vào hệ thống đều được lưu lại nguyên văn, giúp tra soát vì sao một giao dịch được / không được gạch nợ.</div>
+<div class="card mb-3"><div class="card-body small">
+  <div class="row g-3">
+    <div class="col-md-7"><span class="text-muted">Địa chỉ nhận báo có:</span> <code>{{ endpoint }}</code></div>
+    <div class="col-md-5"><span class="text-muted">Header xác thực:</span> <code>Authorization: Apikey {{ token[:4] }}••••••</code> <a href="{{ url_for('admin.settings') }}#Tài khoản nhận tiền (VietQR)">đổi khoá</a></div>
+  </div>
+</div></div>
+<ul class="nav nav-pills mb-3 gap-1">
+  <li class="nav-item"><a class="nav-link {{ 'active' if ok == '' }}" href="{{ url_for('admin.webhooks') }}">Tất cả</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if ok == '1' }}" href="{{ url_for('admin.webhooks', ok=1) }}">Xử lý thành công</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if ok == '0' }}" href="{{ url_for('admin.webhooks', ok=0) }}">Lỗi / không khớp</a></li>
+</ul>
+<div class="card"><div class="table-responsive">
+  <table class="table table-hover">
+    <thead><tr><th>Thời gian</th><th>Nguồn</th><th>HTTP</th><th>Kết quả</th><th>IP</th><th></th></tr></thead>
+    <tbody>{% for r in rows %}
+      <tr class="{{ '' if r.ok else 'log-danger' }}">
+        <td class="small text-nowrap">{{ r.created_at }}</td>
+        <td>{{ {'bank': 'Ngân hàng báo có', 'vnpay_ipn': 'VNPay IPN', 'vnpay_return': 'VNPay Return'}.get(r.source, r.source) }}</td>
+        <td><span class="badge text-bg-{{ 'success' if r.http_status == 200 else 'danger' }}">{{ r.http_status }}</span></td>
+        <td class="small">{% if r.ok %}<span class="text-success">Đã xử lý</span>{% else %}<span class="text-danger">Lỗi / cần kiểm tra</span>{% endif %}</td>
+        <td class="small text-muted">{{ r.ip }}</td>
+        <td><button class="btn btn-sm btn-outline-secondary" type="button" onclick="document.getElementById('w{{ r.id }}').classList.toggle('d-none')">Chi tiết</button></td>
+      </tr>
+      <tr id="w{{ r.id }}" class="d-none"><td colspan="6">
+        <div class="row g-2"><div class="col-md-6"><div class="small fw-semibold mb-1">Dữ liệu nhận được</div><pre class="json">{{ pretty[(r.id, 'payload')] }}</pre></div>
+          <div class="col-md-6"><div class="small fw-semibold mb-1">Kết quả xử lý</div><pre class="json">{{ pretty[(r.id, 'result')] }}</pre></div></div>
+      </td></tr>
+    {% else %}<tr><td colspan="6" class="text-center text-muted py-4">Chưa có lần gọi nào. Thử "Giả lập báo có" hoặc gửi lệnh curl theo README.</td></tr>{% endfor %}</tbody>
+  </table>
+</div></div>
+{% endblock %}

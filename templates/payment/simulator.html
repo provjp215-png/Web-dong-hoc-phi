@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Cổng thanh toán mô phỏng{% endblock %}
+{% block body %}
+<div class="sim-banner"><i class="bi bi-info-circle me-1"></i>MÔI TRƯỜNG MÔ PHỎNG – không phát sinh giao dịch thật, chỉ dùng để trình diễn đồ án</div>
+<div class="sim-head d-flex align-items-center">
+  <div class="fw-bold fs-5"><i class="bi bi-shield-lock me-2"></i>DemoPay Gateway</div>
+  <div class="ms-auto small opacity-75">Đơn vị chấp nhận: {{ SCHOOL }}</div>
+</div>
+<div class="container py-5" style="max-width:920px">
+  <form method="post" class="row g-4">
+    <div class="col-md-7">
+      <div class="card"><div class="card-body p-4">
+        <h5 class="fw-bold mb-3">Chọn ngân hàng</h5>
+        <div class="bank-grid mb-4">
+          {% for b in ['NCB','VCB','BIDV','VTB','TCB','MB','ACB','VPB','TPB','SCB','SHB','OCB'] %}
+          <div><input type="radio" class="btn-check" name="bank" id="b{{ b }}" value="{{ b }}" {{ 'checked' if loop.first }}><label for="b{{ b }}" class="w-100">{{ b }}</label></div>
+          {% endfor %}
+        </div>
+        <h5 class="fw-bold mb-3">Thông tin thẻ</h5>
+        <div class="mb-3"><label class="form-label small text-muted">Số thẻ</label><input class="form-control" value="9704 1985 2619 1432 198"></div>
+        <div class="row g-3 mb-3">
+          <div class="col-7"><label class="form-label small text-muted">Tên chủ thẻ</label><input class="form-control" value="NGUYEN VAN A"></div>
+          <div class="col-5"><label class="form-label small text-muted">Ngày phát hành</label><input class="form-control" value="07/15"></div>
+        </div>
+        <div class="mb-1"><label class="form-label small text-muted">Mã OTP (nhập bất kỳ)</label><input class="form-control" value="123456"></div>
+      </div></div>
+    </div>
+    <div class="col-md-5">
+      <div class="card"><div class="card-body p-4">
+        <div class="text-muted small">Số tiền thanh toán</div>
+        <div class="fs-2 fw-bold text-primary money mb-3">{{ t.amount|vnd }}</div>
+        <div class="d-flex justify-content-between small mb-2"><span class="text-muted">Mã đơn hàng</span><b>{{ t.txn_ref }}</b></div>
+        <div class="d-flex justify-content-between small mb-4"><span class="text-muted">Nội dung</span><b>Thanh toán học phí</b></div>
+        <button name="action" value="success" class="btn btn-primary w-100 py-2 fw-semibold mb-2"><i class="bi bi-check2-circle me-1"></i>Xác nhận thanh toán</button>
+        <button name="action" value="fail" class="btn btn-outline-secondary w-100">Huỷ giao dịch</button>
+      </div></div>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Đăng nhập{% endblock %}
+{% block body %}
+<div class="login-wrap">
+  <div class="login-hero">
+    <img class="sakura" src="{{ url_for('static', filename='img/vju-logo.svg') }}" alt="">
+    <div class="d-flex align-items-center gap-3 mb-5">
+      <img class="login-logo" src="{{ url_for('static', filename='img/vju-logo.svg') }}" alt="Logo {{ SCHOOL_SHORT }}">
+      <div><div class="fw-bold fs-5">{{ SCHOOL }}</div><div class="opacity-75">{{ SCHOOL_EN }} · Phòng Kế hoạch – Tài chính</div></div>
+    </div>
+    <h1>Thanh toán học phí trực tuyến<br><span class="gold">nhanh chóng, minh bạch, an toàn</span></h1>
+    <div class="feature"><i class="bi bi-qr-code-scan"></i><div><b>Quét VietQR hoặc thanh toán qua VNPay</b><br><span class="opacity-75">Hỗ trợ mọi ứng dụng ngân hàng, thẻ ATM nội địa, thẻ quốc tế.</span></div></div>
+    <div class="feature"><i class="bi bi-lightning-charge"></i><div><b>Gạch nợ tự động trong vài giây</b><br><span class="opacity-75">Hệ thống tự đối soát với ngân hàng, không cần nộp minh chứng.</span></div></div>
+    <div class="feature"><i class="bi bi-calendar2-check"></i><div><b>Trả góp theo đợt & nhắc hạn nộp</b><br><span class="opacity-75">Chia học phí tối đa 3 đợt, nhận thông báo trước hạn.</span></div></div>
+    <div class="feature"><i class="bi bi-file-earmark-check"></i><div><b>Biên lai điện tử có mã QR xác thực</b></div></div>
+  </div>
+  <div class="login-form">
+    <form method="post">
+      <img src="{{ url_for('static', filename='img/vju-logo.svg') }}" alt="" style="width:64px" class="mb-3 d-md-none">
+      <h3 class="fw-bold mb-1" style="color:var(--primary)">Đăng nhập</h3>
+      <p class="text-muted mb-4">Sử dụng mã sinh viên hoặc tài khoản cán bộ</p>
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% for cat, m in msgs %}<div class="alert alert-{{ cat }} py-2">{{ m }}</div>{% endfor %}
+      {% endwith %}
+      <label class="form-label fw-semibold">Tên đăng nhập / Mã sinh viên</label>
+      <div class="input-group mb-3">
+        <span class="input-group-text bg-white"><i class="bi bi-person"></i></span>
+        <input name="username" class="form-control" required autofocus placeholder="VD: sv">
+      </div>
+      <div class="d-flex justify-content-between align-items-baseline">
+        <label class="form-label fw-semibold">Mật khẩu</label>
+        <a href="{{ url_for('forgot_password') }}" class="small fw-semibold">Quên mật khẩu?</a>
+      </div>
+      <div class="input-group mb-4">
+        <span class="input-group-text bg-white"><i class="bi bi-lock"></i></span>
+        <input name="password" type="password" class="form-control" required placeholder="••••••">
+      </div>
+      <button class="btn btn-primary w-100 py-2 fw-semibold">Đăng nhập</button>
+      {% if cfg_live.ALLOW_REGISTRATION %}
+      <div class="text-center mt-3 small">Sinh viên mới chưa có tài khoản? <a href="{{ url_for('register') }}" class="fw-semibold">Đăng ký ngay</a></div>
+      {% endif %}
+      <details class="support-details mt-3">
+        <summary><i class="bi bi-question-circle me-1"></i>Không đăng nhập được? Xem hướng dẫn liên hệ</summary>
+        <div class="mt-2">{% include "_support.html" %}</div>
+      </details>
+      <div class="mt-4 p-3 rounded-3 small" style="background:var(--primary-soft)">
+        <b>Tài khoản dùng thử</b> (mật khẩu <code>123456</code>)<br>
+        Sinh viên: <code>sv</code> &nbsp;·&nbsp; Kế toán: <code>ketoan</code> &nbsp;·&nbsp; Quản trị: <code>admin</code>
+      </div>
+      {% if DEMO %}<p class="small text-muted mt-3 mb-0"><i class="bi bi-info-circle me-1"></i>Sản phẩm đồ án môn Công nghệ tài chính – bản demo, không phải cổng thanh toán chính thức của nhà trường.</p>{% endif %}
+    </form>
+  </div>
+</div>
+{% endblock %}

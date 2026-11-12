@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Đăng ký tài khoản sinh viên{% endblock %}
+{% macro field(name, label, type='text', placeholder='', required=True) -%}
+  <div class="col-md-6">
+    <label class="form-label fw-semibold">{{ label }}{% if required %} <span class="text-danger">*</span>{% endif %}</label>
+    <input name="{{ name }}" type="{{ type }}" value="{{ form.get(name, '') if type != 'password' }}" placeholder="{{ placeholder }}"
+           class="form-control {{ 'is-invalid' if errors.get(name) }}" {{ 'required' if required }}>
+    {% if errors.get(name) %}<div class="invalid-feedback">{{ errors[name] }}</div>{% endif %}
+  </div>
+{%- endmacro %}
+{% block body %}
+<div class="auth-center">
+  <div class="card auth-card wide">
+    <div class="card-body p-4 p-md-5">
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <img src="{{ url_for('static', filename='img/vju-logo.svg') }}" alt="Logo {{ SCHOOL_SHORT }}" style="width:64px">
+        <div><h4 class="fw-bold mb-0" style="color:var(--primary)">Đăng ký tài khoản sinh viên</h4>
+          <div class="text-muted small">{{ SCHOOL }}</div></div>
+      </div>
+
+      {% if not open %}
+        <div class="alert alert-warning">Nhà trường hiện chưa mở đăng ký tài khoản trực tuyến. Vui lòng liên hệ phòng ban hỗ trợ.</div>
+        {% include "_support.html" %}
+      {% elif done %}
+        <div class="text-center py-3">
+          <div class="result-icon bg-soft-success"><i class="bi bi-envelope-check"></i></div>
+          <h5 class="fw-bold">Đã gửi đăng ký thành công</h5>
+          <p class="text-muted mb-1">Tài khoản <b>{{ form.student_code }}</b> đang <b>chờ nhà trường đối chiếu hồ sơ và duyệt</b>.</p>
+          <p class="text-muted">Kết quả sẽ được gửi tới email <b>{{ form.email }}</b>. Sau khi được duyệt, bạn đăng nhập bằng mã sinh viên và mật khẩu vừa tạo.</p>
+          <a href="{{ url_for('login') }}" class="btn btn-primary px-4">Về trang đăng nhập</a>
+        </div>
+      {% else %}
+        <div class="alert alert-info small"><i class="bi bi-info-circle me-1"></i>Tài khoản mới sẽ được <b>nhà trường đối chiếu với hồ sơ sinh viên trước khi kích hoạt</b> để đảm bảo không ai đăng ký thay bạn. Vui lòng nhập đúng thông tin như trên thẻ sinh viên.</div>
+        <form method="post" class="row g-3" novalidate>
+          <div class="col-12"><div class="small fw-bold text-uppercase text-muted">Thông tin sinh viên</div></div>
+          {{ field('student_code', 'Mã sinh viên', placeholder='VD: 26CSE0123') }}
+          {{ field('full_name', 'Họ và tên', placeholder='VD: Nguyễn Văn An') }}
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Ngành học <span class="text-danger">*</span></label>
+            <select name="faculty" class="form-select {{ 'is-invalid' if errors.get('faculty') }}" required>
+              <option value="">— Chọn ngành —</option>
+              {% for f in faculties %}<option {{ 'selected' if form.get('faculty') == f }}>{{ f }}</option>{% endfor %}
+            </select>
+            {% if errors.get('faculty') %}<div class="invalid-feedback">{{ errors.faculty }}</div>{% endif %}
+          </div>
+          {{ field('class_name', 'Lớp', placeholder='VD: CSE2601', required=False) }}
+
+          <div class="col-12 mt-4"><div class="small fw-bold text-uppercase text-muted">Liên hệ</div></div>
+          {{ field('email', 'Email (nhận kết quả duyệt & khôi phục mật khẩu)', 'email', 'email@...') }}
+          {{ field('phone', 'Số điện thoại', 'tel', '09xxxxxxxx', required=False) }}
+
+          <div class="col-12 mt-4"><div class="small fw-bold text-uppercase text-muted">Mật khẩu đăng nhập</div></div>
+          {{ field('password', 'Mật khẩu', 'password', 'Ít nhất 6 ký tự') }}
+          {{ field('password2', 'Nhập lại mật khẩu', 'password') }}
+
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input {{ 'is-invalid' if errors.get('agree') }}" type="checkbox" name="agree" id="agree" {{ 'checked' if form }}>
+              <label class="form-check-label small" for="agree">Tôi xác nhận các thông tin trên là chính xác và là của chính tôi.</label>
+              {% if errors.get('agree') %}<div class="invalid-feedback">{{ errors.agree }}</div>{% endif %}
+            </div>
+          </div>
+          <div class="col-12 d-flex gap-2 mt-2">
+            <button class="btn btn-primary px-4 py-2 fw-semibold">Gửi đăng ký</button>
+            <a href="{{ url_for('login') }}" class="btn btn-outline-secondary py-2">Đã có tài khoản? Đăng nhập</a>
+          </div>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

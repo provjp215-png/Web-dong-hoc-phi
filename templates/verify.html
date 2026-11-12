@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Xác thực biên lai{% endblock %}
+{% block body %}
+<div class="container py-5" style="max-width:560px">
+  <div class="text-center mb-4"><img src="{{ url_for('static', filename='img/vju-logo.svg') }}" alt="Logo {{ SCHOOL_SHORT }}" style="width:80px">
+    <h5 class="fw-bold mt-3">{{ SCHOOL }}</h5><div class="text-muted">Tra cứu tính xác thực biên lai điện tử</div></div>
+  <div class="card p-4 text-center">
+    {% if r %}
+      <div class="result-icon bg-soft-success"><i class="bi bi-patch-check"></i></div>
+      <h5 class="fw-bold">Biên lai hợp lệ</h5>
+      <div class="text-start bg-light rounded-3 p-3 mt-3">
+        <div class="d-flex justify-content-between mb-1"><span class="text-muted">Số biên lai</span><b>{{ r.receipt_no }}</b></div>
+        <div class="d-flex justify-content-between mb-1"><span class="text-muted">Sinh viên</span><b>{{ r.full_name }} ({{ r.student_code }})</b></div>
+        <div class="d-flex justify-content-between mb-1"><span class="text-muted">Mã giao dịch</span><b>{{ r.txn_ref }}</b></div>
+        <div class="d-flex justify-content-between"><span class="text-muted">Số tiền</span><b class="text-primary">{{ r.amount|vnd }}</b></div>
+      </div>
+    {% else %}
+      <div class="result-icon bg-soft-danger"><i class="bi bi-x-octagon"></i></div>
+      <h5 class="fw-bold">Không tìm thấy biên lai {{ receipt_no }}</h5>
+      <p class="text-muted mb-0">Biên lai có thể là giả mạo hoặc chưa được phát hành.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

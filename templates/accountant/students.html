@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Sinh viên{% endblock %}
+{% block content %}
+<div class="page-title">Sinh viên</div>
+<div class="page-sub">{{ rows|length }} sinh viên · tổng dư nợ {{ rows|sum(attribute='debt')|vnd }}</div>
+<div class="row g-4">
+  <div class="col-lg-8"><div class="card"><div class="table-responsive" style="max-height:70vh">
+    <table class="table table-hover">
+      <thead class="sticky-top"><tr><th>Mã SV</th><th>Họ tên</th><th>Khoa</th><th>Lớp</th><th>Email</th><th class="text-end">Dư nợ</th><th></th><th></th></tr></thead>
+      <tbody>{% for r in rows %}
+        <tr><td>{{ r.student_code }}</td><td class="fw-semibold">{{ r.full_name }}</td><td>{{ r.faculty }}</td><td>{{ r.class_name }}</td><td class="small">{{ r.email }}</td>
+          <td class="text-end money {{ 'text-danger fw-semibold' if r.debt }}">{{ r.debt|vnd }}</td>
+          <td class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{{ url_for('accountant.charge_request', sv=r.student_code) }}" title="Tạo yêu cầu đóng tiền cho sinh viên này">Yêu cầu thu</a></td>
+          <td><form method="post" onsubmit="return confirm('Đặt lại mật khẩu của {{ r.full_name }} về 123456?')">
+            <input type="hidden" name="action" value="reset_pw"><input type="hidden" name="id" value="{{ r.id }}">
+            <button class="btn btn-sm btn-outline-secondary text-nowrap" title="Dùng khi sinh viên liên hệ vì không đăng nhập được">Đặt lại MK</button></form></td></tr>
+      {% endfor %}</tbody>
+    </table>
+  </div></div></div>
+  <div class="col-lg-4"><div class="card"><div class="card-header">Thêm sinh viên</div><div class="card-body">
+    <form method="post" class="vstack gap-2">
+      <input name="student_code" class="form-control" placeholder="Mã sinh viên" required>
+      <input name="full_name" class="form-control" placeholder="Họ và tên" required>
+      <select name="faculty" class="form-select">{% for f in faculties %}<option>{{ f }}</option>{% endfor %}</select>
+      <input name="class_name" class="form-control" placeholder="Lớp">
+      <input name="email" type="email" class="form-control" placeholder="Email (nhận nhắc hạn)">
+      <input name="phone" class="form-control" placeholder="Số điện thoại">
+      <input name="password" class="form-control" placeholder="Mật khẩu (mặc định 123456)">
+      <button class="btn btn-primary mt-2">Thêm</button>
+    </form>
+  </div></div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Khoản thu & học kỳ{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-start gap-3 mb-4">
+  <div><div class="page-title">Khoản thu & học kỳ</div><div class="text-muted">Khai báo đơn giá, sau đó lập hoá đơn hàng loạt cho sinh viên</div></div>
+  <div class="ms-auto">{% include "accountant/_semester_picker.html" %}</div>
+</div>
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card mb-4"><div class="card-header">Danh mục khoản thu của học kỳ</div>
+      <table class="table">
+        <thead><tr><th>Tên khoản thu</th><th>Loại</th><th class="text-end">Đơn giá</th><th>Cách tính</th><th>Bắt buộc</th><th></th></tr></thead>
+        <tbody>{% for it in items %}
+          <tr><td class="fw-semibold">{{ it.name }}</td><td>{{ categories[it.category] }}</td><td class="text-end money">{{ it.unit_price|vnd }}</td>
+            <td>{{ 'Theo tín chỉ' if it.per_credit else 'Cố định' }}</td><td>{{ '✔' if it.mandatory else 'Tự chọn' }}</td>
+            <td><form method="post"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ it.id }}"><input type="hidden" name="semester_id" value="{{ sid }}"><button class="btn btn-sm btn-link text-danger"><i class="bi bi-trash"></i></button></form></td></tr>
+        {% else %}<tr><td colspan="6" class="text-muted text-center py-3">Chưa có khoản thu</td></tr>{% endfor %}</tbody>
+      </table>
+      <div class="card-body border-top">
+        <form method="post" class="row g-2">
+          <input type="hidden" name="semester_id" value="{{ sid }}">
+          <div class="col-md-4"><input name="name" class="form-control" placeholder="Tên khoản thu" required></div>
+          <div class="col-md-2"><select name="category" class="form-select">{% for k, v in categories.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><input name="unit_price" type="number" step="1000" class="form-control" placeholder="Đơn giá" required></div>
+          <div class="col-md-2 d-flex align-items-center gap-2 small"><label><input type="checkbox" name="per_credit"> /tín chỉ</label><label><input type="checkbox" name="mandatory" checked> bắt buộc</label></div>
+          <div class="col-md-2 d-grid"><button class="btn btn-primary"><i class="bi bi-plus-lg"></i> Thêm</button></div>
+        </form>
+      </div>
+    </div>
+    <div class="card"><div class="card-header"><i class="bi bi-lightning-charge me-2"></i>Lập hoá đơn hàng loạt</div>
+      <div class="card-body">
+        <p class="mb-3">Đã lập <b>{{ n_inv }}</b>/{{ n_stu }} hoá đơn cho học kỳ này. Hệ thống sẽ lập cho <b>{{ n_stu - n_inv }}</b> sinh viên còn lại, tính tiền theo danh mục khoản thu bắt buộc.</p>
+        <form method="post" action="{{ url_for('accountant.generate_invoices') }}" class="d-flex gap-2">
+          <input type="hidden" name="semester_id" value="{{ sid }}">
+          <div class="input-group" style="max-width:260px"><span class="input-group-text">Số tín chỉ</span><input name="credits" type="number" value="15" min="1" class="form-control"></div>
+          <button class="btn btn-success" {{ 'disabled' if n_stu == n_inv }}>Lập hoá đơn</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card"><div class="card-header">Thêm học kỳ mới</div>
+      <div class="card-body"><form method="post" class="vstack gap-2">
+        <input type="hidden" name="action" value="semester">
+        <input name="code" class="form-control" placeholder="Mã, VD: 2026-2" required>
+        <input name="name" class="form-control" placeholder="Tên, VD: Học kỳ 2 năm học 2026-2027" required>
+        <label class="small text-muted">Bắt đầu</label><input name="start_date" type="date" class="form-control">
+        <label class="small text-muted">Kết thúc</label><input name="end_date" type="date" class="form-control">
+        <label class="small text-muted">Hạn nộp học phí (đợt 1)</label><input name="due_date" type="date" class="form-control" required>
+        <button class="btn btn-primary mt-2">Thêm học kỳ</button>
+      </form></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

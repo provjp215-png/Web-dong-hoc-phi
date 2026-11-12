@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge with context %}
+{% block title %}Báo cáo {{ sem.code }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-start gap-3 mb-4">
+  <div><div class="page-title">Báo cáo thu học phí</div><div class="text-muted">{{ sem.name }} · hạn nộp {{ sem.due_date }}</div></div>
+  <div class="ms-auto d-flex gap-2">
+    {% include "accountant/_semester_picker.html" %}
+    <a class="btn btn-success btn-sm" href="{{ url_for('accountant.export', fmt='xlsx', hk=sid) }}"><i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('accountant.export', fmt='csv', hk=sid) }}">CSV</a>
+    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i></button>
+  </div>
+</div>
+{% set t = rep.totals %}
+<div class="card mb-4"><div class="card-header">Tổng hợp</div>
+  <table class="table mb-0">
+    <tbody>
+      <tr><td>Số hoá đơn</td><td class="text-end fw-semibold">{{ t.count }}</td><td>Tổng các khoản thu</td><td class="text-end money">{{ t.subtotal|vnd }}</td></tr>
+      <tr><td>Miễn giảm, học bổng</td><td class="text-end money text-success">− {{ t.discount|vnd }}</td><td>Phải thu</td><td class="text-end money fw-semibold">{{ t.total|vnd }}</td></tr>
+      <tr><td>Đã thu (gốc)</td><td class="text-end money text-primary fw-semibold">{{ t.paid|vnd }}</td><td>Còn phải thu</td><td class="text-end money text-danger fw-semibold">{{ t.outstanding|vnd }}</td></tr>
+      <tr><td>Phí trễ hạn đã thu</td><td class="text-end money">{{ t.late_fee_paid|vnd }}</td><td>Phí trễ hạn tạm tính</td><td class="text-end money">{{ t.late_fee_due|vnd }}</td></tr>
+      <tr><td>Tỷ lệ hoàn thành</td><td class="text-end fw-bold">{{ t.rate }}%</td><td>Đã hoàn thành / Quá hạn</td><td class="text-end">{{ rep.by_status.paid }} / <span class="text-danger">{{ rep.by_status.overdue }}</span></td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="row g-4 mb-4">
+  <div class="col-lg-7"><div class="card h-100"><div class="card-header">Theo khoa</div>
+    <table class="table"><thead><tr><th>Khoa</th><th class="text-end">SV</th><th class="text-end">Phải thu</th><th class="text-end">Đã thu</th><th style="width:28%">Tỷ lệ</th></tr></thead>
+      <tbody>{% for k, f in rep.by_faculty.items() %}{% set pct = (100 * f.paid / f.total)|round(1) if f.total else 0 %}
+        <tr><td>{{ k }}</td><td class="text-end">{{ f.students }}</td><td class="text-end money">{{ f.total|vnd }}</td><td class="text-end money">{{ f.paid|vnd }}</td>
+          <td><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1" style="height:8px"><div class="progress-bar" style="width:{{ pct }}%"></div></div><small>{{ pct }}%</small></div></td></tr>
+      {% endfor %}</tbody></table>
+  </div></div>
+  <div class="col-lg-5"><div class="card h-100"><div class="card-header">Theo kênh thanh toán</div>
+    <table class="table"><thead><tr><th>Kênh</th><th class="text-end">Số GD</th><th class="text-end">Số tiền</th></tr></thead>
+      <tbody>{% for m in rep.by_method %}<tr><td>{{ METHOD_LABEL.get(m.method, m.method) }}</td><td class="text-end">{{ m.n }}</td><td class="text-end money">{{ m.amount|vnd }}</td></tr>{% endfor %}</tbody></table>
+  </div></div>
+</div>
+<div class="card"><div class="card-header">Danh sách sinh viên còn nợ</div><div class="table-responsive">
+  <table class="table table-hover"><thead><tr><th>Mã SV</th><th>Họ tên</th><th>Khoa</th><th class="text-end">Còn nợ</th><th class="text-end">Phí trễ tạm tính</th><th>Trạng thái</th></tr></thead>
+    <tbody>{% for r in rep.invoices if r.outstanding > 0 %}
+      <tr><td>{{ r.student_code }}</td><td>{{ r.full_name }}</td><td>{{ r.faculty }}</td><td class="text-end money text-danger">{{ r.outstanding|vnd }}</td><td class="text-end money">{{ r.late_fee_due|vnd }}</td><td>{{ status_badge(r.display_status) }}</td></tr>
+    {% else %}<tr><td colspan="6" class="text-center text-muted py-3">Không còn sinh viên nợ học phí</td></tr>{% endfor %}</tbody>
+  </table>
+</div></div>
+{% endblock %}

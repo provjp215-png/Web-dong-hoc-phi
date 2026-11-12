@@ -1,0 +1,47 @@
+{% macro status_badge(st) -%}
+  {% set lb = STATUS_LABEL.get(st, (st, 'secondary')) %}<span class="badge text-bg-{{ lb[1] }}">{{ lb[0] }}</span>
+{%- endmacro %}
+
+{% macro method_icon(m) -%}
+  {%- if m == 'vnpay' -%}<i class="bi bi-credit-card-2-front text-danger"></i>
+  {%- elif m == 'vietqr' -%}<i class="bi bi-qr-code text-primary"></i>
+  {%- elif m == 'cash' -%}<i class="bi bi-cash-coin text-success"></i>
+  {%- else -%}<i class="bi bi-phone text-secondary"></i>{%- endif -%}
+{%- endmacro %}
+
+
+{% macro nav_icon(name) -%}
+<svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{%- if name == 'grid' %}<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>{%- 
+elif name == 'wallet' %}<rect x="2" y="5" width="20" height="15" rx="2.5"/><path d="M2 10h20"/><path d="M16 15h2"/>{%- 
+elif name == 'clock' %}<circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.5 2"/>{%- 
+elif name == 'bell' %}<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>{%- 
+elif name == 'gauge' %}<path d="M3.5 17a9 9 0 1 1 17 0"/><path d="M12 13l4-4"/><circle cx="12" cy="13" r="1.2"/>{%- 
+elif name == 'receipt' %}<path d="M5 2.5h14v19l-2.5-1.5-2.5 1.5-2-1.5-2 1.5-2.5-1.5L5 21.5z"/><path d="M9 7.5h6M9 11.5h6M9 15.5h4"/>{%- 
+elif name == 'swap' %}<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>{%- 
+elif name == 'alarm' %}<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5"/><path d="M5 3L2 6M19 3l3 3"/>{%- 
+elif name == 'list' %}<path d="M9 6h12M9 12h12M9 18h12"/><path d="M3.5 6l1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2"/>{%- 
+elif name == 'users' %}<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>{%- 
+elif name == 'chart' %}<path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-9"/>{%- 
+elif name == 'shield' %}<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>{%- 
+elif name == 'user-plus' %}<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/>{%- 
+elif name == 'check-square' %}<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>{%- 
+elif name == 'log' %}<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>{%- 
+elif name == 'zap' %}<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>{%- 
+elif name == 'sliders' %}<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>{%- 
+elif name == 'database' %}<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>{%- 
+elif name == 'upload' %}<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/>{%- 
+elif name == 'key' %}<circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3L21 2M16 7l3 3M18 5l2 2"/>{%- 
+elif name == 'logout' %}<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>{%- 
+elif name == 'file-plus' %}<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15h6"/>{%- 
+elif name == 'lock' %}<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>{%-  endif -%}
+</svg>
+{%- endmacro %}
+
+{% macro user_status(u, now) -%}
+  {%- if u.status == 'active' and u.locked_until and u.locked_until > now -%}
+    <span class="badge text-bg-danger" title="Đến {{ u.locked_until }}">Khoá tạm đến {{ u.locked_until[11:16] }}</span>
+  {%- else -%}
+    {% set lb = USER_STATUS_LABEL.get(u.status, (u.status, 'secondary')) %}<span class="badge text-bg-{{ lb[1] }}">{{ lb[0] }}</span>
+  {%- endif -%}
+{%- endmacro %}

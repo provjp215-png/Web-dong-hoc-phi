@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "_macros.html" import nav_icon with context %}
+{% block title %}Quản trị hệ thống{% endblock %}
+{% block content %}
+<div class="page-title">Tổng quan hệ thống</div>
+<div class="page-sub">Giám sát tài khoản, bảo mật và hoạt động của Cổng thanh toán học phí</div>
+
+{% if s.pending_reg or s.pending_appr %}
+<div class="row g-3 mb-3">
+  {% if s.pending_reg %}<div class="col-md-6"><div class="alert alert-warning d-flex align-items-center mb-0">{{ nav_icon('user-plus') }}<span class="ms-2">Có <b>{{ s.pending_reg }}</b> đăng ký tài khoản sinh viên chờ duyệt.</span><a class="ms-auto btn btn-sm btn-warning" href="{{ url_for('admin.registrations') }}">Duyệt</a></div></div>{% endif %}
+  {% if s.pending_appr %}<div class="col-md-6"><div class="alert alert-warning d-flex align-items-center mb-0">{{ nav_icon('check-square') }}<span class="ms-2">Có <b>{{ s.pending_appr }}</b> đề nghị của kế toán chờ phê duyệt.</span><a class="ms-auto btn btn-sm btn-warning" href="{{ url_for('admin.approval_list') }}">Xem</a></div></div>{% endif %}
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3"><a class="stat-link" href="{{ url_for('admin.users') }}"><div class="card stat h-100"><div class="icon bg-soft-primary">{{ nav_icon('users') }}</div><div><div class="label">Tài khoản hoạt động</div><div class="value">{{ s.by_role.values()|sum }}</div><div class="small text-muted">{{ s.by_role.get('student', 0) }} SV · {{ s.by_role.get('accountant', 0) }} KT · {{ s.by_role.get('admin', 0) }} QT</div></div></div></a></div>
+  <div class="col-sm-6 col-xl-3"><a class="stat-link" href="{{ url_for('admin.audit_log', group='login') }}"><div class="card stat h-100"><div class="icon bg-soft-success">{{ nav_icon('key') }}</div><div><div class="label">Đăng nhập 24 giờ qua</div><div class="value">{{ s.login_24h }}</div><div class="small {{ 'text-danger fw-semibold' if s.failed_24h else 'text-muted' }}">{{ s.failed_24h }} lần thất bại / bị chặn</div></div></div></a></div>
+  <div class="col-sm-6 col-xl-3"><a class="stat-link" href="{{ url_for('admin.users', status='locked') }}"><div class="card stat h-100"><div class="icon bg-soft-danger">{{ nav_icon('lock') }}</div><div><div class="label">Tài khoản đang bị khoá</div><div class="value">{{ s.locked }}</div><div class="small text-muted">gồm khoá tạm do sai mật khẩu</div></div></div></a></div>
+  <div class="col-sm-6 col-xl-3"><a class="stat-link" href="{{ url_for('admin.webhooks') }}"><div class="card stat h-100"><div class="icon bg-soft-warning">{{ nav_icon('zap') }}</div><div><div class="label">Webhook 24 giờ qua</div><div class="value">{{ s.webhook_24h[0] }}</div><div class="small {{ 'text-danger fw-semibold' if s.webhook_24h[1] else 'text-muted' }}">{{ s.webhook_24h[1] }} lần lỗi / không khớp</div></div></div></a></div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-7"><div class="card h-100"><div class="card-header">Hoạt động đăng nhập 7 ngày</div><div class="card-body"><canvas id="cLogin" height="140"></canvas></div></div></div>
+  <div class="col-lg-5">
+    <div class="card h-100"><div class="card-header d-flex justify-content-between"><span>Cảnh báo bất thường (24 giờ)</span></div>
+      <div class="card-body">
+        {% for r in suspicious %}
+          <div class="d-flex align-items-center gap-2 mb-3 p-2 rounded-3 log-danger">
+            {{ nav_icon('shield') }}
+            <div class="flex-grow-1"><div class="fw-semibold">{{ r.target }}</div><small class="text-muted">IP {{ r.ip }} · lần cuối {{ r.last[11:16] }}</small></div>
+            <span class="badge text-bg-danger">{{ r.n }} lần sai</span>
+          </div>
+        {% else %}
+          <div class="text-muted text-center py-4">{{ nav_icon('shield') }}<div class="mt-2">Không phát hiện đăng nhập bất thường</div></div>
+        {% endfor %}
+        <hr>
+        <div class="d-flex justify-content-between small"><span class="text-muted">Giao dịch thành công hôm nay</span><b>{{ s.txn_today[0] }} · {{ s.txn_today[1]|vnd }}</b></div>
+        <div class="d-flex justify-content-between small mt-2"><span class="text-muted">Giao dịch lệch tiền chưa xử lý</span><b class="{{ 'text-danger' if s.review }}">{{ s.review }}</b></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between"><span>Hoạt động gần đây</span><a class="small" href="{{ url_for('admin.audit_log') }}">Xem nhật ký đầy đủ</a></div>
+  <div class="table-responsive"><table class="table">
+    <thead><tr><th>Thời gian</th><th>Tài khoản</th><th>Hành động</th><th>Đối tượng</th><th>IP</th></tr></thead>
+    <tbody>{% for r in recent %}
+      <tr class="{{ 'log-danger' if r.action in danger }}"><td class="small text-nowrap">{{ r.created_at }}</td><td>{{ r.username }} <small class="text-muted">{{ ROLE_LABEL.get(r.role, r.role) }}</small></td>
+        <td>{{ labels.get(r.action, r.action) }}</td><td class="small">{{ r.target }}</td><td class="small text-muted">{{ r.ip }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  const act = {{ activity|tojson }};
+  const days = Object.keys(act);
+  if (window.Chart) new Chart(document.getElementById("cLogin"), {type: "bar", data: {labels: days.map(d => d.slice(5)),
+    datasets: [{label: "Thành công", data: days.map(d => act[d][0]), backgroundColor: "#1f701f", borderRadius: 6},
+               {label: "Thất bại", data: days.map(d => act[d][1]), backgroundColor: "#b8021e", borderRadius: 6}]},
+    options: {plugins: {legend: {position: "bottom"}}, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}}});
+</script>
+{% endblock %}

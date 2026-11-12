@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Nhật ký hệ thống{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-start gap-3 mb-3">
+  <div><div class="page-title">Nhật ký hệ thống</div><div class="text-muted">{{ total }} sự kiện · ai làm gì, lúc nào, từ địa chỉ nào</div></div>
+  <a class="ms-auto btn btn-success btn-sm" href="{{ url_for('admin.audit_export', **request.args) }}"><i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel</a>
+</div>
+<ul class="nav nav-pills mb-3 gap-1">
+  {% for k, lb in [('', 'Tất cả'), ('login', 'Đăng nhập'), ('money', 'Liên quan tiền'), ('danger', 'Cần chú ý')] %}
+  <li class="nav-item"><a class="nav-link {{ 'active' if f.group == k }}" href="{{ url_for('admin.audit_log', group=k) }}">{{ lb }}</a></li>
+  {% endfor %}
+</ul>
+<div class="card mb-3"><div class="card-body">
+  <form class="row g-2">
+    <input type="hidden" name="group" value="{{ f.group }}">
+    <div class="col-lg-2 col-md-4"><input name="user" value="{{ f.user }}" class="form-control" placeholder="Tài khoản / đối tượng"></div>
+    <div class="col-lg-3 col-md-4"><select name="action" class="form-select"><option value="">Mọi hành động</option>
+      {% for k, v in labels.items()|sort(attribute=1) %}<option value="{{ k }}" {{ 'selected' if f.action == k }}>{{ v }}</option>{% endfor %}</select></div>
+    <div class="col-lg-2 col-md-4"><input name="ip" value="{{ f.ip }}" class="form-control" placeholder="Địa chỉ IP"></div>
+    <div class="col-lg-2 col-md-5"><input name="from" type="date" value="{{ f['from'] }}" class="form-control" title="Từ ngày"></div>
+    <div class="col-lg-2 col-md-5"><input name="to" type="date" value="{{ f.to }}" class="form-control" title="Đến ngày"></div>
+    <div class="col-lg-1 col-md-2 d-grid"><button class="btn btn-primary">Lọc</button></div>
+  </form>
+</div></div>
+<div class="card"><div class="table-responsive">
+  <table class="table table-sm table-hover">
+    <thead><tr><th>Thời gian</th><th>Tài khoản</th><th>Hành động</th><th>Đối tượng</th><th>Chi tiết</th><th>IP</th></tr></thead>
+    <tbody>{% for r in rows %}
+      <tr class="{{ 'log-danger' if r.action in danger else 'log-money' if r.action in money }}">
+        <td class="small text-nowrap">{{ r.created_at }}</td>
+        <td class="text-nowrap"><a href="{{ url_for('admin.audit_log', user=r.username) }}">{{ r.username }}</a><br><small class="text-muted">{{ ROLE_LABEL.get(r.role, 'Khách' if r.role == 'guest' else 'Hệ thống') }}</small></td>
+        <td>{{ labels.get(r.action, r.action) }}</td>
+        <td class="small">{{ r.target }}</td>
+        <td class="small text-muted" style="max-width:380px">{{ r.detail }}</td>
+        <td class="small"><a class="text-muted" href="{{ url_for('admin.audit_log', ip=r.ip) }}">{{ r.ip }}</a></td>
+      </tr>
+    {% else %}<tr><td colspan="6" class="text-center text-muted py-4">Không có sự kiện phù hợp</td></tr>{% endfor %}</tbody>
+  </table>
+</div></div>
+{% if pages > 1 %}
+<nav class="mt-3"><ul class="pagination pagination-sm">
+  {% for p in range(1, pages + 1) if p <= 3 or p > pages - 2 or (p - page)|abs <= 2 %}
+    <li class="page-item {{ 'active' if p == page }}"><a class="page-link" href="{{ url_for('admin.audit_log', page=p, **f) }}">{{ p }}</a></li>
+  {% endfor %}
+</ul></nav>
+{% endif %}
+{% endblock %}

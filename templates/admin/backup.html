@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Sao lưu & khôi phục{% endblock %}
+{% block content %}
+<div class="page-title">Sao lưu & khôi phục dữ liệu</div>
+<div class="page-sub">CSDL hiện tại: {{ (size / 1024)|round(1) }} KB · {{ counts.users }} tài khoản · {{ counts.invoices }} hoá đơn · {{ counts.transactions }} giao dịch · {{ counts.receipts }} biên lai · {{ counts.audit_logs }} dòng nhật ký</div>
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex align-items-center"><span>Các bản sao lưu</span>
+        <form method="post" class="ms-auto"><button name="action" value="create" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i> Sao lưu ngay</button></form></div>
+      <div class="table-responsive"><table class="table table-hover">
+        <thead><tr><th>Tên file</th><th>Thời gian</th><th class="text-end">Dung lượng</th><th class="text-end">Thao tác</th></tr></thead>
+        <tbody>{% for f in files %}
+          <tr><td class="small fw-semibold">{{ f.name }}</td><td class="small">{{ f.time.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+            <td class="text-end small">{{ (f.size / 1024)|round(1) }} KB</td>
+            <td class="text-end text-nowrap">
+              <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.backup_download', name=f.name) }}">Tải về</a>
+              <form method="post" class="d-inline"><input type="hidden" name="name" value="{{ f.name }}">
+                <button name="action" value="restore" class="btn btn-sm btn-outline-primary" onclick="return confirm('Khôi phục dữ liệu từ {{ f.name }}? Dữ liệu hiện tại sẽ được sao lưu tự động trước khi ghi đè. Mọi người sẽ bị đăng xuất.')">Khôi phục</button>
+                <button name="action" value="delete" class="btn btn-sm btn-link text-danger" onclick="return confirm('Xoá bản sao lưu này?')"><i class="bi bi-trash"></i>Xoá</button></form>
+            </td></tr>
+        {% else %}<tr><td colspan="4" class="text-center text-muted py-4">Chưa có bản sao lưu nào</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card mb-4"><div class="card-header">Khôi phục từ file trên máy</div><div class="card-body">
+      <form method="post" enctype="multipart/form-data" class="vstack gap-2" onsubmit="return confirm('Khôi phục từ file đã chọn? Dữ liệu hiện tại sẽ được sao lưu tự động trước.')">
+        <input type="file" name="file" accept=".db" class="form-control" required>
+        <button name="action" value="upload" class="btn btn-outline-primary">Tải lên & khôi phục</button>
+        <small class="text-muted">Hệ thống kiểm tra tính toàn vẹn của file trước khi khôi phục.</small>
+      </form>
+    </div></div>
+    <div class="card border-danger"><div class="card-header text-danger">Tạo lại dữ liệu demo</div><div class="card-body">
+      <p class="small">Xoá toàn bộ dữ liệu và tạo lại bộ dữ liệu mẫu (40 sinh viên, 2 học kỳ, tài khoản <code>sv</code>, <code>ketoan</code>, <code>admin</code>). Dùng trước buổi thuyết trình. Dữ liệu hiện tại được sao lưu tự động trước.</p>
+      <form method="post" class="vstack gap-2">
+        <input name="confirm" class="form-control" placeholder='Gõ "TAO LAI" để xác nhận' autocomplete="off">
+        <button name="action" value="demo_reset" class="btn btn-danger">Tạo lại dữ liệu demo</button>
+      </form>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Cấu hình hệ thống{% endblock %}
+{% block content %}
+<div class="page-title">Cấu hình hệ thống</div>
+<div class="page-sub">Thay đổi có hiệu lực ngay, không cần khởi động lại. Mỗi thay đổi được ghi vào nhật ký hệ thống (giá trị cũ → mới).</div>
+<form method="post">
+<div class="row g-4">
+  {% for group, items in groups.items() %}
+  <div class="col-xl-6" id="{{ group }}">
+    <div class="card h-100"><div class="card-header">{{ group }}</div><div class="card-body py-1">
+      {% for it in items %}
+      <div class="setting-row">
+        <div><div class="fw-semibold">{{ it.label }}</div>
+          <small class="text-muted">{{ it.note }}{% if meta.get(it.key) %}{{ ' · ' if it.note }}sửa lần cuối {{ meta[it.key].updated_at }} bởi {{ meta[it.key].updated_by }}{% endif %}</small>
+          {% if it.key == 'ENABLE_VNPAY' and not vnpay_ready %}<div class="small text-danger">Chưa có VNPAY_TMN_CODE trong .env nên kênh này vẫn hiển thị mờ.</div>{% endif %}
+        </div>
+        <div>
+          {% if it.type == 'bool' %}
+            <div class="form-check form-switch m-0 d-flex justify-content-end"><input class="form-check-input" type="checkbox" name="{{ it.key }}" {{ 'checked' if it.value }}></div>
+          {% elif it.type == 'percent' %}
+            <div class="input-group input-group-sm"><input name="{{ it.key }}" value="{{ it.value }}" class="form-control text-end" inputmode="decimal"><span class="input-group-text">%</span></div>
+          {% elif it.type == 'int' %}
+            <input name="{{ it.key }}" type="number" value="{{ it.value }}" class="form-control form-control-sm text-end">
+          {% elif it.type == 'secret' %}
+            <div class="d-flex gap-2"><input class="form-control form-control-sm" value="{{ it.value[:4] }}••••••••" disabled>
+              <button class="btn btn-sm btn-outline-danger text-nowrap" name="action" value="regen_token" formnovalidate onclick="return confirm('Tạo khoá mới? Khoá cũ hết hiệu lực ngay, phải cập nhật lại ở dịch vụ báo có ngân hàng.')">Tạo khoá mới</button></div>
+          {% else %}
+            <input name="{{ it.key }}" value="{{ it.value }}" class="form-control form-control-sm">
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div></div>
+  </div>
+  {% endfor %}
+</div>
+<div class="d-flex gap-2 mt-4 position-sticky bottom-0 py-3" style="background:var(--bg)">
+  <button class="btn btn-primary px-4" name="action" value="save">Lưu cấu hình</button>
+  <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">Huỷ thay đổi</a>
+  <span class="ms-auto small text-muted align-self-center">Email SMTP: {{ 'đã cấu hình' if smtp else 'chưa cấu hình (sửa trong .env)' }}</span>
+</div>
+</form>
+{% endblock %}

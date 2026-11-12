@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Tạo yêu cầu thu{% endblock %}
+{% block content %}
+<div class="page-title">Tạo yêu cầu đóng tiền cho sinh viên</div>
+<div class="page-sub">Dùng khi cần thu riêng một hoặc vài sinh viên: sinh viên nhập học muộn, phí thi lại / học lại, phí làm lại thẻ, ký túc xá đăng ký sau…</div>
+<div class="row g-4">
+  <div class="col-xl-7">
+    <form method="post" class="card" id="chargeForm">
+      <div class="card-body vstack gap-4">
+        <div>
+          <label class="form-label fw-semibold">1. Sinh viên</label>
+          <div class="input-group mb-2">
+            <input id="svPick" class="form-control" list="svList" placeholder="Gõ mã hoặc tên để tìm, rồi bấm Thêm">
+            <button type="button" class="btn btn-outline-primary" onclick="addSv()">Thêm</button>
+          </div>
+          <datalist id="svList">{% for s in students %}<option value="{{ s.student_code }}">{{ s.full_name }} · {{ s.faculty }}</option>{% endfor %}</datalist>
+          <textarea name="codes" id="codes" rows="2" class="form-control" placeholder="Mã sinh viên, mỗi dòng một mã (có thể dán nhiều mã)">{{ form.get('codes', form.get('sv', '')) }}</textarea>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6"><label class="form-label fw-semibold">2. Học kỳ</label>
+            <select name="semester_id" id="semSel" class="form-select">{% for s in semesters %}<option value="{{ s.id }}" {{ 'selected' if s.id == sid }}>{{ s.name }}</option>{% endfor %}</select></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Hạn nộp</label>
+            <input type="date" name="due_date" value="{{ form.get('due_date', '') }}" class="form-control">
+            <small class="text-muted">Để trống = theo hạn của học kỳ (khoản bổ sung: sau 14 ngày)</small></div>
+        </div>
+
+        <div>
+          <label class="form-label fw-semibold">3. Khoản thu trong danh mục</label>
+          <div class="border rounded-3 p-2" id="itemBox">
+            {% for it in items %}
+            <label class="d-flex align-items-center gap-2 px-2 py-1 fee-opt" data-sem="{{ it.semester_id }}" data-mand="{{ it.mandatory }}">
+              <input type="checkbox" class="form-check-input m-0" name="fee_item_ids" value="{{ it.id }}"
+                {{ 'checked' if (form.getlist('fee_item_ids') and it.id|string in form.getlist('fee_item_ids')) or (not form.getlist('fee_item_ids') and request.method == 'GET' and it.mandatory) }}>
+              <span class="flex-grow-1">{{ it.name }} <small class="text-muted">· {{ categories[it.category] }}{{ '' if it.mandatory else ' · tự chọn' }}</small></span>
+              <b class="money">{{ it.unit_price|vnd }}{{ '/tín chỉ' if it.per_credit }}</b>
+            </label>
+            {% endfor %}
+            <div class="text-muted small px-2 py-1 d-none" id="noItems">Học kỳ này chưa có khoản thu trong danh mục.</div>
+          </div>
+          <small class="text-muted">Nếu sinh viên đã có hoá đơn kỳ này, các khoản đã có sẽ tự bỏ qua (không thu trùng).</small>
+        </div>
+
+        <div>
+          <label class="form-label fw-semibold">4. Khoản phát sinh ngoài danh mục <small class="text-muted fw-normal">(không bắt buộc)</small></label>
+          {% set eds = form.getlist('extra_desc') if form.getlist else [] %}{% set eas = form.getlist('extra_amount') if form.getlist else [] %}
+          {% for i in range(3) %}
+          <div class="row g-2 mb-2">
+            <div class="col-8"><input name="extra_desc" value="{{ eds[i] if eds|length > i }}" class="form-control" placeholder="{{ ['VD: Phí thi lại môn Kinh tế vi mô', 'VD: Phí học lại 3 tín chỉ', 'VD: Phí làm lại thẻ sinh viên'][i] }}"></div>
+            <div class="col-4"><div class="input-group"><input name="extra_amount" value="{{ eas[i] if eas|length > i }}" class="form-control text-end" inputmode="numeric" placeholder="0"><span class="input-group-text">₫</span></div></div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-4"><label class="form-label fw-semibold">Số tín chỉ</label><input name="credits" type="number" min="1" value="{{ form.get('credits', 15) }}" class="form-control"><small class="text-muted">cho khoản tính theo tín chỉ</small></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">Số đợt (hoá đơn mới)</label>
+            <select name="n_installments" class="form-select">{% for n in range(1, cfg.MAX_INSTALLMENTS + 1) %}<option value="{{ n }}" {{ 'selected' if form.get('n_installments')|string == n|string }}>{{ 'Nộp 1 lần' if n == 1 else n ~ ' đợt' }}</option>{% endfor %}</select></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">Ghi chú gửi sinh viên</label><input name="note" value="{{ form.get('note', '') }}" class="form-control" placeholder="Không bắt buộc"></div>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+          <button class="btn btn-primary px-4 fw-semibold">Tạo yêu cầu thu</button>
+          <small class="text-muted">Sinh viên nhận thông báo ngay và thanh toán như học phí thông thường.</small>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-xl-5">
+    {% if results %}
+    {% set n_ok = results|selectattr('ok')|list|length %}
+    <div class="card mb-3 border-2 {{ 'border-success' if n_ok == results|length else 'border-danger' if n_ok == 0 else 'border-warning' }}">
+      <div class="card-header fw-bold {{ 'text-success' if n_ok == results|length else 'text-danger' if n_ok == 0 else 'text-warning' }}">
+        Kết quả: {{ n_ok }}/{{ results|length }} sinh viên tạo thành công</div>
+      <ul class="list-group list-group-flush">
+        {% for r in results %}
+        <li class="list-group-item d-flex gap-3 align-items-start">
+          <span class="fs-5">{% if r.ok %}✅{% else %}⚠️{% endif %}</span>
+          <div class="flex-grow-1"><div class="fw-semibold">{{ r.code }}{% if r.name %} · {{ r.name }}{% endif %}</div>
+            {% if r.ok %}<div class="small text-success fw-semibold">Tạo thành công{% if r.due %} · hạn nộp {{ r.due }}{% endif %}</div>{% endif %}
+            <small class="{{ 'text-muted' if r.ok else 'text-danger' }}">{{ r.msg }}</small>
+            {% if r.hint %}<div class="small mt-1"><i class="bi bi-lightbulb"></i> {{ r.hint }}</div>{% endif %}
+            {% if not r.ok and r.invoice_id %}<a class="small" href="{{ url_for('accountant.invoice_detail', invoice_id=r.invoice_id) }}">Xem hoá đơn hiện có</a>{% endif %}</div>
+          {% if r.ok %}<div class="text-end"><b class="money text-primary">+{{ r.amount|vnd }}</b><br>
+            <a class="small" href="{{ url_for('accountant.invoice_detail', invoice_id=r.invoice_id) }}">Xem hoá đơn</a></div>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+    <div class="card"><div class="card-body small">
+      <div class="fw-semibold mb-2">Hệ thống xử lý thế nào?</div>
+      <div class="mb-2"><b>Sinh viên chưa có hoá đơn kỳ này</b> → tạo hoá đơn mới gồm đúng các khoản bạn chọn, chia theo số đợt đã chọn.</div>
+      <div class="mb-2"><b>Đã có hoá đơn nhưng chưa nộp đồng nào</b> → cộng khoản mới vào hoá đơn và chia lại các đợt.</div>
+      <div><b>Đã có hoá đơn và đã nộp (một phần hoặc hết)</b> → thêm một <b>đợt bổ sung</b> đúng bằng số tiền phát sinh, có hạn nộp riêng; các đợt đã nộp giữ nguyên.</div>
+    </div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  function addSv() {
+    const v = document.getElementById("svPick").value.trim(); if (!v) return;
+    const ta = document.getElementById("codes");
+    const list = ta.value.split(/[\s,;]+/).filter(Boolean);
+    if (!list.includes(v)) list.push(v);
+    ta.value = list.join("\n"); document.getElementById("svPick").value = "";
+  }
+  document.getElementById("svPick").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addSv(); } });
+  function filterItems(changed) {
+    const sem = document.getElementById("semSel").value; let shown = 0;
+    document.querySelectorAll(".fee-opt").forEach(el => {
+      const on = el.dataset.sem === sem, box = el.querySelector("input");
+      el.classList.toggle("d-none", !on);
+      if (!on) box.checked = false;
+      else { shown++; if (changed) box.checked = el.dataset.mand === "1"; }
+    });
+    document.getElementById("noItems").classList.toggle("d-none", shown > 0);
+  }
+  document.getElementById("semSel").addEventListener("change", () => filterItems(true));
+  filterItems();
+</script>
+{% endblock %}

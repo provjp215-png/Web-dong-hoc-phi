@@ -1,0 +1,6 @@
+<form class="d-flex align-items-center gap-2" method="get">
+  <i class="bi bi-calendar3 text-muted"></i>
+  <select name="hk" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    {% for s in semesters %}<option value="{{ s.id }}" {{ 'selected' if s.id == sid }}>{{ s.name }}</option>{% endfor %}
+  </select>
+</form>

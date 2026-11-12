@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Nhắc hạn nộp{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-start gap-3 mb-4">
+  <div><div class="page-title">Nhắc hạn nộp học phí</div>
+    <div class="text-muted">Các đợt nộp đã quá hạn hoặc đến hạn trong {{ days }} ngày tới · {{ items|length }} khoản</div></div>
+  <form method="post" class="ms-auto"><button class="btn btn-primary" {{ 'disabled' if not items }}><i class="bi bi-send me-1"></i>Gửi nhắc nhở cho tất cả</button></form>
+</div>
+{% if not smtp %}<div class="alert alert-info small"><i class="bi bi-info-circle me-1"></i>Chưa cấu hình SMTP: nhắc nhở chỉ hiển thị trong mục <b>Thông báo</b> của sinh viên. Điền SMTP_* trong file <code>.env</code> để gửi email (VD: Gmail với mật khẩu ứng dụng).</div>{% endif %}
+<div class="card"><div class="table-responsive">
+  <table class="table table-hover">
+    <thead><tr><th>Sinh viên</th><th>Email</th><th>Học kỳ</th><th>Đợt</th><th>Hạn nộp</th><th>Tình trạng</th><th class="text-end">Số tiền</th><th class="text-end">Phí trễ</th></tr></thead>
+    <tbody>{% for inv, i in items %}
+      <tr><td><a href="{{ url_for('accountant.invoice_detail', invoice_id=inv.id) }}">{{ inv.full_name }}</a><br><small class="text-muted">{{ inv.student_code }}</small></td>
+        <td class="small">{{ inv.email }}</td><td>{{ inv.semester_code }}</td><td>{{ i.seq }}</td><td>{{ i.due_date }}</td>
+        <td>{% if i.overdue %}<span class="badge text-bg-danger">Quá hạn {{ i.overdue_days }} ngày</span>{% else %}<span class="badge text-bg-warning">Còn {{ i.days_left }} ngày</span>{% endif %}</td>
+        <td class="text-end money">{{ i.outstanding|vnd }}</td><td class="text-end money text-danger">{{ i.late_fee|vnd if i.late_fee else '—' }}</td></tr>
+    {% else %}<tr><td colspan="8" class="text-center text-muted py-4">Không có khoản nào cần nhắc</td></tr>{% endfor %}</tbody>
+  </table>
+</div></div>
+<p class="small text-muted mt-3">Tự động hoá: đặt lịch chạy lệnh <code>flask --app app send-reminders</code> mỗi sáng bằng Task Scheduler (Windows) hoặc cron.</p>
+{% endblock %}
